@@ -1,6 +1,6 @@
 # Machine Learning for signal processing on insects' behaviors
 
-Constributors:
+Contributors:
 * Quang Dung Dinh
 * Truong Son Hy
 * Phuong Dao

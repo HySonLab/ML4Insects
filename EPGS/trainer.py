@@ -222,7 +222,7 @@ class Trainer():
                         f"Validation accuracy: {' '.join([str(num) for num in np.round(self.result_['validation_accuracy'],2)])}\n",
                         ])  
                             
-    def plot_result(self, savefig = True, name = ''):
+    def plot_result(self, savefig = True):
         # Learning curves
         train_loss = self.result_['training_loss']
         val_loss = self.result_['validation_loss']
@@ -264,7 +264,7 @@ class Trainer():
             if not os.path.exists(log_path):
                 os.makedirs(log_path)
             d = str(datetime.date.today())
-            p = os.path.join(log_path, f'{name}_{self.model.__arch__}_{d}.png')
+            p = os.path.join(log_path, f'{self.config.exp_name}_{self.model.__arch__}_{d}.png')
             plt.savefig(p)
         
     def save_checkpoint(self):

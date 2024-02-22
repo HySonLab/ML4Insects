@@ -1,0 +1,7 @@
+pip install librosa 
+pip install pywt 
+pip install scipy
+pip install plotly
+pip install plotly_resampler 
+pip install easydict 
+pip install sklearn

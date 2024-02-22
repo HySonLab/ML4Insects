@@ -151,10 +151,8 @@ class Trainer():
             print('Finished testing!')
 
     def train(self, early_stop = True, patience = 5, min_delta = 0.01, verbose = True):
-
         if self.data_available == False:
-            all_dataset_names = train_utils.get_dataset_group(self.config.dataset_name)
-            self.generate_data(all_dataset_names)
+            raise RuntimeError ('Fit data first.')
         if self.data_loader_available == False:
             self.get_loader()
 
@@ -181,8 +179,12 @@ class Trainer():
         self.initialize_weights()
         self.result_ = {'training_loss': [], 'validation_loss': [],'validation_accuracy': [], 
                        'test_class_accuracy': [], 'test_score': [], 'test_confusion_matrix': []}
+        self.X = None
+        self.y = None 
+        self.data_available = False 
+        self.data_loader_available = False 
         
-    def write_log(self, description):
+    def write_log(self):
         
         if not os.path.exists(f'./log/{self.model.__arch__}'):
             os.makedirs(f'./log/{self.model.__arch__}')
@@ -213,7 +215,7 @@ class Trainer():
 
             f.writelines([
                         f'======================================================================================\n',
-                        f'Date: {date} | Description: {description} | Model version: {self.model.__version__}\n',
+                        f'Date: {date} | Description: {self.config.exp_name} | Model version: {self.model.__version__}\n',
                         f'Optimizer: {self.config.optimizer} | Device: {self.device} | Epochs: {self.config.n_epochs} | Learning rate: {self.config.lr} | Batch size: {self.config.batch_size}\n',
                         f"Training loss: {' '.join([str(num) for num in np.round(self.result_['training_loss'],2)])}\n",
                         f"Validation loss: {' '.join([str(num) for num in np.round(self.result_['validation_loss'],2)])}\n",
@@ -262,11 +264,10 @@ class Trainer():
             if not os.path.exists(log_path):
                 os.makedirs(log_path)
             d = str(datetime.date.today())
-            p = os.path.join(log_path, f'{name}_{self.model.__arch__}_{d}')
+            p = os.path.join(log_path, f'{name}_{self.model.__arch__}_{d}.png')
             plt.savefig(p)
         
-    def save_checkpoint(self, description):
-        # description: Write some description about the data used or simply an empty string
+    def save_checkpoint(self):
         archi = self.model.__arch__
         date = str(datetime.date.today())
         if not os.path.exists('checkpoints'):
@@ -276,7 +277,7 @@ class Trainer():
         saved_name = f'arch-{self.model.__arch__}.window-{self.config.window_size}.'
         saved_name += f'method-{self.config.method}.scale-{self.config.scale}.optimizer-{self.config.optimizer}.'
         saved_name += f'epochs-{self.config.n_epochs}.lr-{self.config.lr}.batchsize-{self.config.batch_size}.'
-        dir = f'checkpoints/{archi}/' + saved_name + date + '.' + description + '.json'
+        dir = f'checkpoints/{archi}/' + saved_name + '.' + self.config.exp_name + date + '.json'
         torch.save(self.model, dir)
         print(f'Parameters saved to "{dir}".')
 
@@ -306,32 +307,40 @@ def calculate_statistics(array):
     return np.array([max, min, mean, sd])
 
 # ========================================================================================================================
+from copy import deepcopy as dc 
 class cross_validate():
     def __init__(self, model, config, n_folds):
         self.trainer = Trainer(model,config)
         self.n_folds = n_folds
         self.data_available = False 
         
-    def CV(self, data_names, verbose = True):
+    def CV(self, verbose = True):
         random_state = [10*n for n in range(self.n_folds)]
         k_fold_result_ = []
+        k_fold_models_ = []
         for i in range(self.n_folds):
             print(f'=================== Fold {i+1}, random_state {random_state[i]}===================') if verbose == True else None
             self.trainer.reset()
-            self.trainer.generate_data(data_names, random_state = random_state[i])
+            all_dataset_names = train_utils.get_dataset_group(self.trainer.config.dataset_name)
+            self.trainer.generate_data(all_dataset_names, random_state = random_state[i])
             self.trainer.train(early_stop = False, verbose = verbose)
             self.trainer.test(verbose = verbose)
             k_fold_result_.append(self.trainer.result_)
+            k_fold_models_.append(dc(self.trainer.model))
         self.k_fold_result_ = k_fold_result_
-    
+        self.k_fold_models = k_fold_models_
+        self.summarize()
+
     def summarize(self):
         index = ['max','min','mean','sd']
         summ = {}
-        acc = [self.k_fold_result_[i]['test_score']['accuracy'] for i in range(self.n_folds)]
-        b_acc = [self.k_fold_result_[i]['test_score']['recall'] for i in range(self.n_folds)]
-        f1 = [self.k_fold_result_[i]['test_score']['f1'] for i in range(self.n_folds)]
+        acc = np.array([self.k_fold_result_[i]['test_score']['accuracy'] for i in range(self.n_folds)])
+        recall = np.array([self.k_fold_result_[i]['test_score']['recall'] for i in range(self.n_folds)]) # recall_macro = balanced_accuracy
+        precision = np.array([self.k_fold_result_[i]['test_score']['precision'] for i in range(self.n_folds)]) 
+        f1 = np.array([self.k_fold_result_[i]['test_score']['f1'] for i in range(self.n_folds)])
         summ['accuracy'] = calculate_statistics(acc)
-        summ['recall'] = calculate_statistics(b_acc)
+        summ['recall'] = calculate_statistics(recall)
+        summ['precision'] = calculate_statistics(recall)
         summ['f1'] = calculate_statistics(f1) 
 
         cl = datahelper.waveform_labels
@@ -342,24 +351,41 @@ class cross_validate():
             summ[cl[i]] = calculate_statistics(class_acc)
         summ = pd.DataFrame(summ,index = index)
         summ = summ.apply(lambda x: round(x,2))
-        return summ
+        self.cv_summary = summ
+
+        best_fold_idx = np.argmax(np.stack([acc, recall, f1]).mean(axis=0))
+        self.best_fold_model = dc(self.k_fold_models[best_fold_idx])
+        self.log_index = len(os.listdir('./log/kfold'))//3 # tag + result + figure for each run
+
+    def save_best_model(self):
+        
+        archi = self.trainer.model.__arch__
+        date = str(datetime.date.today())
+        if not os.path.exists(f'checkpoints/kfold/{archi}'):
+            os.makedirs(f'checkpoints/kfold/{archi}')
+        saved_name = f'arch-{self.trainer.model.__arch__}.window-{self.trainer.config.window_size}.'
+        saved_name += f'method-{self.trainer.config.method}.scale-{self.trainer.config.scale}.optimizer-{self.trainer.config.optimizer}.'
+        saved_name += f'epochs-{self.trainer.config.n_epochs}.lr-{self.trainer.config.lr}.batchsize-{self.trainer.config.batch_size}.'
+        dir = f'checkpoints/kfold/{archi}/' + saved_name + '.' + self.trainer.config.exp_name + date + '.json'
+        
+        torch.save(self.best_fold_model, dir)
+        print(f'Parameters saved to "{dir}".')
 
     def write_log(self):
-        summary = self.summarize()
+        if not os.path.exists('./log/kfold'):
+            os.makedirs('./log/kfold')
+
         date = str(datetime.datetime.now())[:-7]
         cl = datahelper.waveform_labels
+        
+        self.cv_summary.to_csv(f'./log/kfold/kfold-result_{self.log_index}.csv')
+        self.tag = pd.DataFrame([[date, self.trainer.config.exp_name, self.trainer.model.__version__,
+                                    self.trainer.config.optimizer, self.trainer.device, self.trainer.config.n_epochs,
+                                    self.trainer.config.lr, self.trainer.config.batch_size]], 
+                                columns=['Date', 'Description', 'Version', 'Optimizer', 'Device', '#Epochs', 'Learning rate', 'Batch size'])
+        self.tag.to_csv(f'./log/kfold/kfold_result_{self.log_index}.tag')
 
-        with open('./log/kfold_log.txt','a') as f:
-            f.writelines([
-                        f'======================================================================================\n'
-                        f'Date: {date} | Version: {self.trainer.model.__version__} | Device:{self.trainer.device} | Description: {self.trainer.config.dataset_name}' +
-                        f' | #Epochs: {self.trainer.config.n_epochs} | Learning rate: {self.trainer.config.lr} | Batch size: {self.trainer.config.batch_size}\n',
-                        f'{self.n_folds}-fold max/min/mean/sd\n',
-                        f"{summary}\n"
-                        ])
-
-
-    def plot_summary(self, savefig = False, description = ''): #Trainer.result has train loss, valid acc, test score, test class accuracy and test confusion matrix
+    def plot_summary(self, savefig = False): #Trainer.result has train loss, valid acc, test score, test class accuracy and test confusion matrix
         # Learning curves
         train_loss = np.stack([self.k_fold_result_[i]['training_loss'] for i in range(self.n_folds)])
         train_loss_mean = np.mean(train_loss, axis = 0)
@@ -406,7 +432,7 @@ class cross_validate():
         ax[1].boxplot(scores)
         ax[1].set_xticks(np.arange(1,5),['Accuracy','f1','precision','recall'])
         ax[1].set_title('Test scores')
-        ax[1].set_ylim(0.4,1)
+        ax[1].set_ylim(0,1)
 
         ax[2].boxplot(class_accuracy)
         ax[2].set_xticks(np.arange(1,8), datahelper.waveform_labels)
@@ -420,9 +446,10 @@ class cross_validate():
         ax[3].set_ylabel('True label')
 
         if savefig == True:
-            if not os.path.exists('log'):
-                os.makedirs('log')
-            d = str(datetime.date.today())
-            p = os.path.join(os.getcwd(), 'log', f'{self.model.__arch__}_f"{self.n_folds}folds"_{d}_{description}')
+            if not os.path.exists('log/kfold'):
+                os.makedirs('log/kfold')
+ 
+            p = f'./log/kfold/kfold-result_{self.log_index}.png'
             plt.savefig(p)
+
 

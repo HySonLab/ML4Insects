@@ -18,7 +18,7 @@ def main():
     cv = cross_validate(model, config, n_folds = 10)
     cv.CV()
     cv.write_log()
-    cv.plot_summary(save_fig = True)
+    cv.plot_summary(savefig = True)
     cv.save_best_model()
 
 if __name__ == '__main__':

@@ -1,0 +1,10 @@
+{
+    "exp_name": "Green peach aphid",
+    "dataset_name": "ArabidopsisGPA",
+    "window_size": 1024, 
+    "hop_length": 1024, 
+    "method": "raw", 
+    "scale": true, 
+    "outlier_filter": false, 
+    "scope":4
+    }

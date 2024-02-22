@@ -1,0 +1,10 @@
+{
+    "exp_name": "Cannabis aphid",
+    "dataset_name": "cannabis",
+    "window_size": 1024, 
+    "hop_length": 1024, 
+    "method": "raw", 
+    "scale": true, 
+    "outlier_filter": false, 
+    "scope":4
+    }

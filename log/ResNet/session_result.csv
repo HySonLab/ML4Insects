@@ -1,0 +1,4 @@
+,Date,Description,Version,Optimizer,Device,#Epochs,Learning_rate,Batch_size,Train_loss,Val_loss,Val_acc,Test_acc,Test_f1,Test_precision,Test_recall,np_acc,c_acc,e1_acc,e2_acc,f_acc,g_acc,pd_acc
+0,2024-02-21 19:18:48,zt,baseline,Adam,cuda,100,0.0001,256,0.0300201319881632,0.1193392903337048,0.9688066340820474,0.89,0.86,0.88,0.86,0.97,0.52,0.88,0.99,0.96,0.98,0.87
+0,2024-02-22 00:24:12,Bird Cherry-oat Aphid,baseline,Adam,cuda,100,0.0001,256,0.0949470384031768,0.2001276464319565,0.9410623198048348,0.82,0.81,0.86,0.79,0.77,0.67,0.84,0.92,0.92,0.97,0.88
+0,2024-02-22 00:42:44,Bird Cherry-oat Aphid,baseline,Adam,cuda,100,0.0001,256,0.040701904481984526,0.22301429163821987,0.9467731204258151,0.8,0.81,0.86,0.79,0.8,0.6,0.86,0.94,0.93,0.96,0.9

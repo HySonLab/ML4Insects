@@ -1,0 +1,4 @@
+,Date,Description,Version,Optimizer,Device,#Epochs,Learning_rate,Batch_size,Train_loss,Val_loss,Val_acc,Test_acc,Test_f1,Test_precision,Test_recall,np_acc,c_acc,e1_acc,e2_acc,f_acc,g_acc,pd_acc
+0,2024-02-21 18:58:40,zt,baseline,Adam,cuda,100,0.0001,256,0.1751047612956831,0.186867745179269,0.9301444340710636,0.93,0.87,0.87,0.88,0.9,0.81,0.65,0.99,0.96,0.95,0.84
+0,2024-02-22 00:59:37,Cannabis aphid,baseline,Adam,cuda,100,0.0001,256,0.2020117961823113,0.2248590239515043,0.9246233878833856,0.88,0.85,0.88,0.84,0.96,0.79,0.94,0.97,0.71,0.87,0.89
+0,2024-02-22 00:59:58,Bird Cherry-oat Aphid,baseline,Adam,cuda,100,0.0001,256,0.24702853544021217,0.2741099906639314,0.9096251940563318,0.87,0.85,0.88,0.82,0.9,0.79,0.8,0.92,0.92,0.95,0.86

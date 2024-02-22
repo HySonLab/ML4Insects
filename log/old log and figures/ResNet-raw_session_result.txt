@@ -1,0 +1,13 @@
+======================================================================================
+Date: 2024-02-12 18:17:57 | Description: zt_data | Model version: baseline
+Optimizer: Adam | Device: cuda | Epochs: 100 | Learning rate: 0.0001 | Batch size: 128
+Test class accuracy: [0.948, 0.701, 0.852, 0.982, 0.99, 0.889, 0.992]
+Acc: 0.9403    Balanced_acc: 0.8879    f1: 0.942    precision: 0.9495    recall: 0.9403    ======================================================================================
+Date: 2024-02-12 19:08:12 | Description: hemp_data | Model version: baseline
+Optimizer: Adam | Device: cuda | Epochs: 100 | Learning rate: 0.0001 | Batch size: 128
+Test class accuracy: [0.955, 0.672, 0.829, 0.779, 0.957, 0.886, 0.965]
+Acc: 0.8461    Balanced_acc: 0.804    f1: 0.8486    precision: 0.8708    recall: 0.8461    ======================================================================================
+Date: 2024-02-12 19:38:32 | Description: wheat_data | Model version: baseline
+Optimizer: Adam | Device: cuda | Epochs: 100 | Learning rate: 0.0001 | Batch size: 128
+Test class accuracy: [0.961, 0.846, 0.968, 0.935, 0.268, 0.482, 0.781]
+Acc: 0.8682    Balanced_acc: 0.6328    f1: 0.8556    precision: 0.8611    recall: 0.8682    

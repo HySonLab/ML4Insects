@@ -1,0 +1,17 @@
+======================================================================================
+Date: 2024-02-08 10:56:02 | Description: zt_data | Model version: baseline
+Optimizer: Adam | Device: cuda | Epochs: 100 | Learning rate: 0.0001 | Batch size: 128
+Test class accuracy: [0.868, 0.754, 0.464, 0.951, 0.976, 0.747, 0.98]
+Acc: 0.8993    Balanced_acc: 0.8414    f1: 0.9034    precision: 0.9185    recall: 0.8993    ======================================================================================
+Date: 2024-02-08 11:00:40 | Description: zt_data | Model version: baseline
+Optimizer: SGD | Device: cuda | Epochs: 100 | Learning rate: 0.0001 | Batch size: 128
+Test class accuracy: [nan, nan, nan, nan, nan, nan, 0.526]
+Acc: 0.5264    Balanced_acc: 0.1429    f1: 0.3631    precision: 0.2771    recall: 0.5264    ======================================================================================
+Date: 2024-02-08 11:08:45 | Description: hemp_data | Model version: baseline
+Optimizer: Adam | Device: cuda | Epochs: 100 | Learning rate: 0.0001 | Batch size: 128
+Test class accuracy: [0.933, 0.719, 0.836, 0.591, 0.887, 0.824, 0.961]
+Acc: 0.8383    Balanced_acc: 0.8052    f1: 0.84    precision: 0.8518    recall: 0.8383    ======================================================================================
+Date: 2024-02-08 11:10:21 | Description: wheat_data | Model version: baseline
+Optimizer: Adam | Device: cuda | Epochs: 100 | Learning rate: 0.0001 | Batch size: 128
+Test class accuracy: [0.951, 0.877, 0.755, 0.949, 0.194, 0.506, 0.786]
+Acc: 0.8609    Balanced_acc: 0.6272    f1: 0.8502    precision: 0.8479    recall: 0.8609    

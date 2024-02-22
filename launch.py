@@ -19,6 +19,7 @@ def main():
     cv.CV()
     cv.write_log()
     cv.plot_summary(save_fig = True)
+    cv.save_best_model()
 
 if __name__ == '__main__':
     main()

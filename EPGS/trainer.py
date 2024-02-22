@@ -1,5 +1,5 @@
 from dataloader import datahelper, dataloader, datagenerator
-from utils import doc_utils, metrics
+from utils import doc_utils, train_utils, metrics
 
 import torch
 import torch.nn as nn
@@ -153,7 +153,7 @@ class Trainer():
     def train(self, early_stop = True, patience = 5, min_delta = 0.01, verbose = True):
 
         if self.data_available == False:
-            all_dataset_names = doc_utils.get_dataset_group(self.config.dataset_name)
+            all_dataset_names = train_utils.get_dataset_group(self.config.dataset_name)
             self.generate_data(all_dataset_names)
         if self.data_loader_available == False:
             self.get_loader()

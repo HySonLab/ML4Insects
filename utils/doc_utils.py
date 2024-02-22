@@ -11,7 +11,7 @@ def get_filename(name):
     unique = np.unique(unique)
     return unique
     
-def get_train_test_filenames(train_ratio = None, n_train = None, n_test = None, shuffle = False, name = None, random_state = 10):
+def get_train_test_filenames(train_ratio = None, n_train = None, n_test = None, name = None, random_state = 10):
     np.random.seed(random_state)
     if name is None:
         list_dir = [d for d in os.listdir('./data/') if not d.endswith('_ANA') if '.' not in d]
@@ -22,8 +22,7 @@ def get_train_test_filenames(train_ratio = None, n_train = None, n_test = None, 
 
     for name in list_dir: 
         recording_names = get_filename(name)
-        if shuffle == True:
-            np.random.shuffle(recording_names)
+        np.random.shuffle(recording_names)
         if (train_ratio is not None):
             n = int(train_ratio*len(recording_names))
             train_name = recording_names[:n]

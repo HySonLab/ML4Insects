@@ -1,0 +1,5 @@
+Exp.BCOA1. Elapsed features computation time: 2307.4587401000026
+Exp.BCOA2. Elapsed features computation time: 1078.192475799995
+Exp.cannabis_aphid. Elapsed features computation time: 1293.0280598999816
+Exp.green_peach_aphid. Elapsed features computation time: 1332.04330640001
+Exp.soybean_aphid. Elapsed features computation time: 649.8144397999858

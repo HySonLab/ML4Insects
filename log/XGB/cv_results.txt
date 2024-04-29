@@ -1,7 +1,0 @@
-Date: 2024-04-28 22:15:14 | Model: XGB | Dataset: 5
-fit_time: 41.68 +- 0.25
-score_time: 0.24 +- 0.05
-test_accuracy: 0.95 +- 0.0
-test_f1_macro: 0.91 +- 0.01
-test_precision_macro: 0.95 +- 0.01
-test_recall_macro: 0.89 +- 0.01

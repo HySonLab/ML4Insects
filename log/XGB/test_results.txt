@@ -1,6 +1,0 @@
-Date: 2024-04-28 22:15:29 | Model: XGB | Dataset: 5
-accuracy: 0.95 
-f1: 0.9 
-precision: 0.94 
-recall: 0.88 
-Class accuracy: [0.98, 0.88, 0.83, 0.98, 0.99, 0.99, 0.91]

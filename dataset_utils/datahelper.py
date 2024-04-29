@@ -72,7 +72,6 @@ import os
 wd = os.getcwd()
 
 def get_filename(name, data_path = '../data'):
-    print(f'{data_path}/{name}_ANA')
     filenames = os.listdir(f'{data_path}/{name}_ANA')
     unique = []
     for name in filenames:

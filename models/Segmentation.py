@@ -8,13 +8,15 @@ import matplotlib.pyplot as plt
 
 from utils import doc_utils, metrics, visualization
 from dataset_utils import datagenerator, dataloader, datahelper
-import time 
+import time
+import datetime 
+import os 
 
 def get_model(type):
     if type == 'mlp':
         return MLP()
     elif type == 'fcn':
-        return CNN1D()
+        return FCN()
     elif type == 'cnn2d':
         return CNN2D()
     elif type == 'resnet':
@@ -31,7 +33,7 @@ class EPGS:
 
         # Model/ optimizers
         self.device = config.device
-        self.model = get_model(config.arch).to(self.device)        
+        self.model = get_model(self.config.arch).to(self.device)        
         self.lr = config.lr 
         self.batch_size = config.batch_size
         if config.optimizer == 'Adam':
@@ -165,7 +167,12 @@ class EPGS:
             if verbose == True:
                 if (epoch %10 == 0) or (epoch == self.n_epochs - 1):
                     print(f"Epoch [{epoch+1}/{self.n_epochs}] | Train loss: {tr_loss:.4f}| Val. loss: {val_loss:.4f} | Train acc: {tr_acc:.4f} | Val. acc: {val_acc:.4f}") 
-                    
+
+            if epoch == 20 or epoch == 50 or epoch == 99: 
+                self.evaluate(task = 'test')
+                self.write_train_log()
+                self.save_checkpoint(f'fcn_combined_{epoch}.json')     
+                   
             if early_stop == True:
                 if early_stopper.early_stop(self.train_result_['validation_loss'][-1]):   
                     if _is_early_stopped == False:   
@@ -180,25 +187,13 @@ class EPGS:
         self._is_model_trained = True
         print('Finished training!') if verbose == True else None
 
-    def write_train_log(self):
-        doc_utils.write_training_log(self.model, self.config, self.train_result_)
-                            
-    def plot_train_result(self, savefig = False):
-        doc_utils.plot_training_result(self.model, self.config, self.train_result_, savefig)
-        
-    def save_checkpoint(self, name = ''):
-        date = str(datetime.date.today())
-        os.makedirs(f'checkpoints/{self.model.__arch__}', exist_ok = True)
-
-        if name == '':
-            saved_name = f'arch-{self.model.__arch__}.version-{self.model.__version__}.window-{self.config.window_size}.'
-            saved_name += f'method-{self.config.method}.scale-{self.config.scale}.optimizer-{self.config.optimizer}.'
-            saved_name += f'epochs-{self.config.n_epochs}.lr-{self.config.lr}.batchsize-{self.config.batch_size}'
-        else:
-            saved_name = name
-        dir = f'checkpoints/{self.model.__arch__}/{saved_name}.{date}.{self.config.exp_name}.json'
-        torch.save(self.model, dir)
-        print(f'Parameters saved to "{dir}".')
+    def reset(self):
+        self._is_model_trained = False 
+        self._is_pretrained = False
+        self.train_result_ = {'training_loss': [], 'training_accuracy': [], 'validation_loss': [], 'validation_accuracy': [], 
+                       'test_class_accuracy': [], 'test_score': [], 'test_confusion_matrix': [],
+                       'training_time' :0, 'data_processing_time':0, 'per_epoch_training_time': []}
+        self.model = get_model(self.config.arch).to(self.device)       
 
     def load_checkpoint(self, path):
         try:
@@ -249,7 +244,7 @@ class EPGS:
         pred_segmentation = []
         for i in range(len(pred_windows)):
             pred_segmentation.extend([pred_windows[i]]*test_hop_length)
-
+        pred_segmentation = np.array(pred_segmentation)
         pred_segmentation = extend(pred_segmentation, self.true_segmentation)
 
         # Scoring
@@ -275,6 +270,26 @@ class EPGS:
             self.pred_ana.to_csv(f'./prediction/ANA/Untitled_{index}.ANA',sep = '\t',header = None,index=None)
         else:
             self.pred_ana.to_csv(f'./prediction/ANA/{name}.ANA',sep = '\t',header = None,index=None)
+                               
+    def write_train_log(self):
+        doc_utils.write_training_log(self.model, self.config, self.train_result_)
+                            
+    def plot_train_result(self, savefig = False):
+        doc_utils.plot_training_result(self.model, self.config, self.train_result_, savefig)
+        
+    def save_checkpoint(self, name = ''):
+        date = str(datetime.date.today())
+        os.makedirs(f'./checkpoints/{self.model.__arch__}', exist_ok = True)
+
+        if name == '':
+            saved_name = f'arch-{self.model.__arch__}.version-{self.model.__version__}.window-{self.config.window_size}.'
+            saved_name += f'method-{self.config.method}.scale-{self.config.scale}.optimizer-{self.config.optimizer}.'
+            saved_name += f'epochs-{self.config.n_epochs}.lr-{self.config.lr}.batchsize-{self.config.batch_size}'
+        else:
+            saved_name = name
+        dir = f'./checkpoints/{self.model.__arch__}/{saved_name}.{date}.{self.config.exp_name}.json'
+        torch.save(self.model, dir)
+        print(f'Parameters saved to "{dir}".')
 
     def plot_segmentation(self, which = 'pred_vs_gt', savefig = False, name: str = ''): 
         visualization.plot_gt_vs_pred_segmentation(self.recording, self.ana, self.pred_ana, which, savefig)

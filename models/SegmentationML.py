@@ -1,4 +1,5 @@
 from sklearn.model_selection import cross_validate
+from sklearn.metrics import accuracy_score
 from utils.metrics import scoring
 
 from copy import deepcopy as dc
@@ -25,7 +26,7 @@ def get_MLmodel(name):
     if name == 'RF':
         return RandomForestClassifier(class_weight='balanced', n_jobs=-1, random_state=28)
     elif name == 'XGB':
-        return XGBClassifier(n_jobs = -1)
+        return XGBClassifier(n_jobs = -1, n_estimators = 300, max_depth = 6, eta = 0.3)
     elif name == 'SVC':
         return SVC(class_weight = 'balanced', kernel = 'linear')
     elif name == 'LogReg':
@@ -76,10 +77,10 @@ class EPGS_ML():
 
         # Prediction
         print('Predicting ...')
-        self.pred_windows = self.model.predict(X_test)
-
+        self.pred_proba = self.model.predict_proba(X_test)
+        pred_windows = np.argmax(self.pred_proba, axis = -1)
         # Scoring
-        results = scoring(y_test, self.pred_windows)
+        results = scoring(y_test, pred_windows)
         scores = results['scores']
         cf = results['confusion_matrix']
         self.result_['class_acc'] = [cf[i,i] for i in range(cf.shape[0])]
@@ -120,10 +121,11 @@ class EPGS_ML():
             f.writelines([f"{s}: {self.result_['test_scores'][s]} \n" for s in self.result_['test_scores'].keys()])  
             f.writelines(f'Class accuracy: {self.result_["class_acc"]}\n')  
 
-    def segment(self, recording_name, verbose = False):
+    def segment(self, recording_name, return_score = True, verbose = False):
 
         # Prepare data
         print('Preparing data...') if verbose == True else None
+        self.recording_name = recording_name
         self.recording, self.ana = read_signal(recording_name)
         test_hop_length = self.config.hop_length // self.config.scope
         data = generate_sliding_windows(self.recording, self.ana, 
@@ -141,28 +143,28 @@ class EPGS_ML():
         # Predict
         print('Generating segmentation ...') if verbose == True else None
 
-        self.pred_proba = self.model.predict_proba(self.input)
-        pred_windows = np.argmax(self.pred_proba, axis = -1)
+        self.pred_segm_proba = self.model.predict_proba(self.input)
+        pred_windows = np.argmax(self.pred_segm_proba, axis = -1)
 
         # Generate segmentation
         pred_segmentation = []
         for i in range(len(pred_windows)):
             pred_segmentation.extend([pred_windows[i]]*test_hop_length)
-
+        pred_segmentation = np.array(pred_segmentation)
         pred_segmentation = extend(pred_segmentation, self.true_segmentation)
 
-        results = scoring(self.true_segmentation, pred_segmentation)
-        self.cf = results['confusion_matrix']
-        self.scores = results['scores']
-        # self.scores['top-2_accuracy'] = top_k_accuracy(self.pred_proba, self.true_segmentation)
-        print(f"Accuracy: {self.scores['accuracy']}, f1: {self.scores['f1']}")
+        # Calculate overlapping rate
+        accuracy = accuracy_score(self.true_segmentation, pred_segmentation) 
+        self.overlapping_rate = accuracy
+        # self.scores['top-2_accuracy'] = top_k_accuracy(self.pred_segm_proba, self.true_segmentation)
+        print(f"Overlapping rate: {accuracy}")
         print('Finished.') if verbose == True else None
 
         # map to ground_truth labels  
         self.pred_segmentation = pd.Series(pred_segmentation).map({0: 1, 1: 2, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8}).to_numpy() 
         self.pred_ana = to_ana(self.pred_segmentation) 
 
-        return self.pred_ana 
+        return self.pred_ana, self.overlapping_rate
 
     def save_analysis(self, name: str = ''):
 
@@ -170,15 +172,15 @@ class EPGS_ML():
         dir = os.listdir('./prediction/ANA')
         index = len(dir) + 1
         if name == '':
-            self.pred_ana.to_csv(f'./prediction/ANA/Untitled_{index}.ANA',sep = '\t',header = None,index=None)
+            self.pred_ana.to_csv(f'./prediction/ANA/{self.recording_name}.ANA',sep = '\t',header = None,index=None)
         else:
             self.pred_ana.to_csv(f'./prediction/ANA/{name}.ANA',sep = '\t',header = None,index=None)
 
     def plot_pred_proba(self, r: tuple = None, ax = None):
-        visualization.plot_pred_proba(self.pred_proba, self.config.hop_length, self.config.scope, r, ax)
+        visualization.plot_pred_proba(self.pred_segm_proba, self.config.hop_length, self.config.scope, r, ax)
 
-    def plot_segmentation(self, which = 'pred_vs_gt', savefig = False, name: str = ''): 
-        visualization.plot_gt_vs_pred_segmentation(self.recording, self.ana, self.pred_ana, which, savefig)
+    def plot_segmentation(self, which = 'pred_vs_gt', savefig = False): 
+        visualization.plot_gt_vs_pred_segmentation(self.recording, self.ana, self.pred_ana, which, savefig, name = self.recording_name)
         
     def interactive_plot(self, which = 'prediction', smoothen = False):
         if which == 'prediction':

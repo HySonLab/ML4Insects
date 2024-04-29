@@ -11,7 +11,7 @@ def write_training_log(model, config, result):
     os.makedirs(f'./log/{model.__arch__}', exist_ok= True)
     date = str(datetime.datetime.now())[:-7]
     columns = ['Date','Description', 'Version', 'Optimizer', 'Device', '#Epochs', 'Learning_rate', 'Batch_size'] \
-                        + ['t_train', 't_test', 't_train_epoch', 't_data'] \
+                        + ['t_train', 't_train_epoch', 't_data'] \
                         + ['Train_loss', 'Train_accuracy', 'Val_loss', 'Val_acc', 'Test_acc', 'Test_f1', 'Test_precision', 'Test_recall'] \
                         + ['np_acc', 'c_acc', 'e1_acc', 'e2_acc', 'f_acc', 'g_acc', 'pd_acc']
 
@@ -24,7 +24,7 @@ def write_training_log(model, config, result):
     
     
     infos = [date, config.exp_name, model.__version__, config.optimizer, config.device, config.n_epochs, config.lr, config.batch_size]
-    t = [result['training_time'], result['testing_time'], np.mean(result['per_epoch_training_time']), result['data_processing_time']]
+    t = [result['training_time'], np.mean(result['per_epoch_training_time']), result['data_processing_time']]
     train_loss = result['training_loss'][-1]
     train_acc = result['training_accuracy'][-1]
     val_loss = result['validation_loss'][-1]

@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 import librosa
-import pywt
-from .datahelper import read_signal, format_data, get_filename, get_train_test_filenames, create_map, ana_labels, encoded_labels, get_dataset_group
+from .datahelper import read_signal, format_data, get_filename, get_dataset_group, create_map, ana_labels, encoded_labels
 from utils.preprocessing import quantile_filter
 from sklearn.preprocessing import MinMaxScaler
 from copy import deepcopy as dc
+from tqdm import tqdm
 # from utils.augmentation import *
 
 
@@ -103,7 +103,7 @@ def generate_sliding_windows(   wave_array,
         else:
             return d
 
-def generate_input_data(   dataset_name, 
+def generate_inputs(   dataset_name, 
                                 window_size = 1024, 
                                 hop_length = 1024, 
                                 method= 'raw', 
@@ -128,8 +128,9 @@ def generate_input_data(   dataset_name,
     count = 0
     d = []; l = []  
     for subset in subdatasets:
+        print(f'Sub-dataset {subset}.')
         all_recordings = get_filename(subset)
-        for n in all_recordings:
+        for n in tqdm(all_recordings):
 
             df, ana = read_signal(n)
             features, labels = generate_sliding_windows(df, ana, window_size, hop_length, method, outlier_filter, scale, True, 'train')

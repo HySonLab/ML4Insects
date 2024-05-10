@@ -4,12 +4,13 @@ import pywt
 from scipy.stats import skew
 from utils.stats import calculate_statistics
 from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 
-from .datagenerator import generate_input_data
+from .datagenerator import generate_inputs
 
 def calculate_features(df):
     d = []
-    for i in range(len(df)):
+    for i in tqdm(range(len(df))):
         feats_vector = []
         coef = pywt.wavedec(df[i,:],'sym4',level = 3)
         for i in range(len(coef)):
@@ -20,8 +21,9 @@ def calculate_features(df):
     return d
 
 def compute_features_matrix(dataset_name, window_size = 1024, hop_length = 1024):
-
-    d = generate_input_data(   dataset_name = dataset_name, 
+    
+    print('Generating sliding windows ...')
+    d = generate_inputs(   dataset_name = dataset_name, 
                                     window_size = window_size, 
                                     hop_length = hop_length, 
                                     method = 'raw', 
@@ -31,24 +33,29 @@ def compute_features_matrix(dataset_name, window_size = 1024, hop_length = 1024)
                                     verbose = False)
     data, labels = d['data'], d['label']
 
-    # Read data
-    X_train, y_train, X_test, y_test = train_test_split(data, labels, test_size = 0.2, random_state = 28, stratify = labels)
-    t0 = time.perf_counter() # Time counter
-
     # Compute features
+    t0 = time.perf_counter() # Time counter
+    
+    X_train, y_train, X_test, y_test = train_test_split(data, labels, test_size = 0.2, random_state = 28, stratify = labels)
+
+    print('Computing training features matrices ...')
     X_train = calculate_features(X_train)
+
+    print('Computing testing features matrices ...')
     X_test = calculate_features(X_test)
+
     t1 = time.perf_counter() # Time counter
 
+    print(f'Dataset {dataset_name}. Elapsed computation time: {t1-t0}')
+
     # Save as .csv
+    print('Saving datasets to .csv ...')
     os.makedirs('./dataML', exist_ok = True)
     pd.DataFrame(y_train).to_csv(f'./dataML/Label_{dataset_name}_train.csv',header = None, index= None)
     pd.DataFrame(y_test).to_csv(f'./dataML/Label_{dataset_name}_test.csv',header = None, index= None)
     pd.DataFrame(X_train).to_csv(f'./dataML/Data_{dataset_name}_train.csv',header = None, index= None)
     pd.DataFrame(X_test).to_csv(f'./dataML/Data_{dataset_name}_test.csv',header = None, index= None)
     
-    print(f'Dataset {dataset_name}. Elapsed computation time: {t1-t0}')
-
     f = open('./log/features_computation_time.txt', 'a')
     f.writelines([f'Dataset {dataset_name}. Elapsed features computation time: {t1-t0}\n'])
 

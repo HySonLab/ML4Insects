@@ -121,10 +121,10 @@ class EPGS_ML():
             f.writelines([f"{s}: {self.result_['test_scores'][s]} \n" for s in self.result_['test_scores'].keys()])  
             f.writelines(f'Class accuracy: {self.result_["class_acc"]}\n')  
 
-    def segment(self, recording_name, return_score = True, verbose = False):
+    def segment(self, recording_name, return_score = True):
 
         # Prepare data
-        print('Preparing data...') if verbose == True else None
+        print('Generating segmentation ...')
         self.recording_name = recording_name
         self.recording, self.ana = read_signal(recording_name)
         test_hop_length = self.config.hop_length // self.config.scope
@@ -135,13 +135,14 @@ class EPGS_ML():
                                             scale = self.config.scale, 
                                             task = 'test')
         if self.ana is not None:
+            
             self.input = calculate_features(data[0])
             self.true_segmentation = data[1]
         else:
             self.input = calculate_features(input)
 
         # Predict
-        print('Generating segmentation ...') if verbose == True else None
+        
 
         self.pred_segm_proba = self.model.predict_proba(self.input)
         pred_windows = np.argmax(self.pred_segm_proba, axis = -1)
@@ -158,13 +159,15 @@ class EPGS_ML():
         self.overlapping_rate = accuracy
         # self.scores['top-2_accuracy'] = top_k_accuracy(self.pred_segm_proba, self.true_segmentation)
         print(f"Overlapping rate: {accuracy}")
-        print('Finished.') if verbose == True else None
 
         # map to ground_truth labels  
         self.pred_segmentation = pd.Series(pred_segmentation).map({0: 1, 1: 2, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8}).to_numpy() 
         self.pred_ana = to_ana(self.pred_segmentation) 
-
-        return self.pred_ana, self.overlapping_rate
+        
+        if return_score == True:
+            return self.pred_ana, self.overlapping_rate
+        else:
+            return self.pred_ana
 
     def save_analysis(self, name: str = ''):
 

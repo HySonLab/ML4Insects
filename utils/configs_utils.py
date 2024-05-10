@@ -32,7 +32,6 @@ def process_config(json_file):
 
     
     time = str(datetime.datetime.now())[:-7]
-    config.data_path = './data'
     config.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     config.timestamp = time
     return config 

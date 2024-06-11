@@ -1,2 +1,2 @@
-from . import configs_utils, bash_utils, doc_utils, metrics, preprocessing, stats, visualization  
+from . import configs_utils, bash_utils, utils, metrics, preprocessing, stats, visualization  
 

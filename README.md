@@ -12,21 +12,21 @@ With simple syntaxes, the package provides several machine learning algorithms f
 
 ![ML4Insects](/figures/prediction.png "Example of a prediction segmentation vs the ground-truth version. The overlap rate is 95%.")
 ## Usage 
-To use EPGS, first download the package (.zip) and put it inside your working directory at the same level with your folder whose subfolders are your dataset. Your dataset folder should contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.epgsystems.eu/). Each complete recording comprises of recording file with `.A0x` extension. The analysis file containing the ground truth segmentation for a recording should be put in a folder named `dataset_ANA` at the same level with your `dataset` folder. 
+To use EPGS, first download the package (.zip) and put it inside your working directory at the same level with your folder whose subfolders are your dataset. Your dataset folder should contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.epgsystems.eu/). Each complete recording comprises of recording file with `.A0x` extension. Their names should be formated into `dataset.recording_name.A0x`. The analysis file containing the ground truth segmentation for a recording should be put in a folder named `dataset_ANA` at the same level with your `dataset` folder. 
 
 For example 
 ```
 working directory
 ├── all_datasets
-│   ├── example_dataset
-|   |   └── example_dataset.name0.A01
-|   |   └── example_dataset.name1.A01
+│   ├── dataset
+|   |   └── dataset.name0.A01
+|   |   └── dataset.name1.A01
 |   |   └── ...
-|   |   └── example_dataset.name0.A08
-|   |   └── example_dataset.name1.A08
-|   ├── example_dataset_ANA
-|   |   └── example_dataset.name0_ANA
-|   |   └── example_dataset.name1_ANA
+|   |   └── dataset.name0.A08
+|   |   └── dataset.name1.A08
+|   ├── dataset_ANA
+|   |   └── dataset.name0_ANA
+|   |   └── dataset.name1_ANA
 |   |   └── ...
 └── EPGS
 └── ...

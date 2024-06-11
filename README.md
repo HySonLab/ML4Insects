@@ -31,6 +31,8 @@ working directory
 └── EPGS
 └── ...
 ```
+For training a model, predicting segmenation or making visualization, please refer to the example notebooks. 
+
 ## Functions
 ### Train ML models for characterizing EPG waveforms
 The data visualization functions are based on well-known visualization libraries such as matplotlib and plotly. To help with visualizing a huge numbers of data points, the code includes **cite plotly resampler**. 

@@ -32,12 +32,13 @@ working directory
 └── EPGS
 └── ...
 ```
-For training a model, predicting segmenation or making visualization, please refer to the example notebooks. 
 
 ## Functions
+For training a model, predicting segmenation or making visualization, please refer to the example notebooks. 
 ### Train ML models for characterizing EPG waveforms
-The data visualization functions are based on well-known visualization libraries such as matplotlib and plotly. To help with visualizing a huge numbers of data points, the code includes **cite plotly resampler**. 
-With EPGS, users can visualize the entire signal in both _static_ and _interactive_ states.
+EPGS provides two trainer objects for training Deep Learning (CNN1D, ResNet and CNN2D) and Traditional Machine Learning (XGB, Random Forest, Logistic Regression) for characterizing EPG waveforms. After a model is trained, it can be used for EPG waveform segmentation. The trainer objects also provide post-prediction utilities such as saving checkpoints (for DL models) and plot the segmentation result/ metrics.
+### Visualization
+A nice feature of EPGS is the ability to create color plot of an input recording,  in both _static_ and _interactive_ states. The data visualization functions are based on well-known visualization libraries such as matplotlib and plotly. To help with visualizing a huge numbers of data points, we use `plotly-resampler` [2]. 
 
 ## Citation
 [1.](https://onlinelibrary.wiley.com/doi/10.1111/j.1570-7458.1978.tb02836.x) Tjallingii WF. Electronic Recording of Penetration Behaviour by Aphids Entomologia Experimentalis et Applicata. 1978; 24(3): 721–730.

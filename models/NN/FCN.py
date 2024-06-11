@@ -10,7 +10,7 @@ def compute_size(input_size, conv_layer):
     new_size = int((input_size + 2*padding - dilation*(kernel_size - 1) - 1)/stride + 1)
     return new_size
 
-class 1DCNN(nn.Module):
+class CNN1D(nn.Module):
     def __init__(self, input_size = 1024, filter = 64, kernel_size = 9, n_class = 7):
         torch.manual_seed(28)
         super().__init__()

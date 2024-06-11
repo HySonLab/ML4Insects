@@ -2,9 +2,7 @@ import json
 import os 
 import datetime
 from easydict import EasyDict
-from copy import deepcopy as dc
 import torch
-from models.NN import *
 
 def get_config_from_json(json_file):
     """

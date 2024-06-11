@@ -11,7 +11,7 @@ from plotly_resampler import FigureResampler, FigureWidgetResampler
 from dataset_utils.datahelper import get_index
 from copy import deepcopy as dc
 
-c ={'np':'darkgoldenrod',    'c':'lightgreen',    'e1':'skyblue',    'e2':'deeppink',  'f':'crimson',   'g':'darkblue',   'pd':'olive'}
+c = {'NP':'darkgoldenrod',    'C':'lightgreen',    'E1':'skyblue',    'E2':'deeppink',  'F':'crimson',   'G':'darkblue',   'pd':'olive'}
 
 #######################
 ## Display waveforms ##
@@ -29,7 +29,7 @@ def visualize_signal(recording, ana_file, sr = 100, ax = None, title = ''):
     Input:
         :param recording: wave signal of class np.ndarray
         :param ana: analysis file corresponding to the recording
-        :param wave_type: 'whole' or str of {'np','c','e1','e2','g','f'}:; select the part of the signal to be plotted
+        :param wave_type: 'whole' or str of {'NP', 'C', 'E1', 'E2', 'F', 'G', 'pd'}
         :param sr: sampling rate. Default = 100Hz.
     Output:
         plot of the full wave (wave types) with colors
@@ -53,7 +53,7 @@ def visualize_signal(recording, ana_file, sr = 100, ax = None, title = ''):
         custom_legends.append(Line2D([0], [0], color=c[wave_type], lw=4))
         i+=1
 
-    ax.legend(custom_legends,waveform_indices.keys(),loc = 'upper right', ncols=len(custom_legends), fontsize = 15)
+    ax.legend(custom_legends, ['NP', 'C', 'pd', 'F', 'G','E1', 'E2'],loc = 'upper right', ncols=len(custom_legends), fontsize = 15)
     ax.set_xticks(np.arange(0,time_axis.max(),2000), labels=np.arange(0,time_axis.max(),2000), rotation = 45)
     ax.set_xlabel(f'Time (s). Sampling rate: {sr} (Hz)')
     ax.set_ylabel('Amplitude (V)')
@@ -66,7 +66,7 @@ def visualize_waveform(recording, ana_file, waveform = None, in_between = False,
     Input:
         :param recording: wave signal of class np.ndarray
         :param ana: analysis file corresponding to the recording
-        :param wave_type: 'whole' or str of {'np','c','e1','e2','g','f'}:; select the part of the signal to be plotted
+        :param wave_type: 'whole' or str of {'NP', 'C', 'E1', 'E2', 'F', 'G', 'pd'}
         :param sr: sampling rate. Default = 100Hz.
     Output:
         plot of the full wave (wave types) with colors
@@ -105,7 +105,7 @@ def visualize_waveform(recording, ana_file, waveform = None, in_between = False,
                 ax.plot(time_axis[end-1:end_pad],recording[end-1:end_pad],
                         color = c[latter_label], label = latter_label)
     else:
-        raise RuntimeError("Must in put a waveform in ['np', 'c', 'e1', 'e2', 'f', 'g', 'pd']")
+        raise ValueError("Must be one of 'NP', 'C', 'E1', 'E2', 'F', 'G' or 'pd' ")
     return plt.gcf()
 
 ### Interactive
@@ -146,7 +146,7 @@ def draw_fft_diagrams(recording, ana_file, sr = 100, wave_type: str = None, whic
     Input:
         recording: dataframe containing wave data - 2 columns [time,amplitude]
         ana: analysis file corresponding to the recording
-        wave_type: 'full' or type of waves in {'np','c','e1','e2','g','f'} that will determine if the whole waveform is plotted or only a specific wave type
+        wave_type: 'whole' or type of waves in 'NP', 'C', 'E1', 'E2', 'F', 'G', 'pd'
         is_average: if True, takes the average of all fft rows
         n_windows: the number of coefficients rows to plot
     Output:
@@ -193,37 +193,6 @@ def draw_fft_diagrams(recording, ana_file, sr = 100, wave_type: str = None, whic
     ax2.plot(wave_sample, color = 'blue')
     ax2.set_title(f"Time domain representation")
     
-def draw_wavelet_transform_diagram(signal, wavelet = 'sym4', level = 3):
-    '''
-    Input. 
-        low_freq: low frequency coefficients
-        high_freq: high frequency coefficients
-
-    '''
-    A = []
-    D = []
-    cA = signal
-    for i in range(0,3):
-        cA, cD = pywt.dwt(cA, wavelet = wavelet)
-        A.append(cA)
-        D.append(cD)
-
-    fig = plt.figure(figsize=(14,8))
-    gs = fig.add_gridspec(level+1,2)
-    ax0 = fig.add_subplot(gs[0,:])
-    ax0.plot(signal, label = 'signal', color = 'blue')
-    ax0.legend(loc = 'upper left')
-    ax = []
-    for n in range(1,2*level+1):
-        resolution = (n+1)//2
-        small_ax = fig.add_subplot(gs[resolution, (n+1)%2])
-        if (n+1)%2 == 0:
-            small_ax.plot(A[resolution - 1], label = f'A{resolution - 1}', color = 'lightpink') 
-        else: 
-            small_ax.plot(D[resolution - 1], label = f'D{resolution - 1}', color = 'lightgreen') 
-        small_ax.legend(loc = 'upper left')
-        ax.append(small_ax)
-    plt.subplots_adjust(hspace=0.3)
 
 ###############################
 ## Result plotting utilities ##
@@ -271,25 +240,25 @@ def plot_gt_vs_pred_segmentation(recording, gt_ana, pred_ana = None, which = 'pr
     if which == 'prediction':
         plt.figure(figsize=(16,3))
         visualize_signal(recording, pred_ana)
-        plt.title(name + ' Prediction result')
+        plt.title('Prediction')
         plt.tight_layout()
     elif which == 'ground_truth':
         assert (gt_ana is not None), 'Ground-truth analysis not found.'
         plt.figure(figsize=(16,3))
         visualize_signal(recording, gt_ana)
-        plt.title(name + ' Prediction result')
+        plt.title('Prediction')
         plt.tight_layout() 
 
     elif which == 'pred_vs_gt':
         f, ax = plt.subplots(2, 1, figsize=(16,5))
         
         visualize_signal(recording, gt_ana, ax=ax[0])
-        ax[0].text(0.85, 0.1, name + ' Ground-truth segmentation', horizontalalignment='center', verticalalignment='center', transform=ax[0].transAxes)
+        ax[0].text(0.85, 0.1, 'Ground-truth', horizontalalignment='center', verticalalignment='center', transform=ax[0].transAxes)
         ax[0].set_xlabel('')
         ax[0].set_xticks([])
-
+        ax[0].set_title(name)
         visualize_signal(recording, pred_ana, ax = ax[1])
-        ax[1].text(0.85, 0.1, name + ' Predicted segmentation', horizontalalignment='center', verticalalignment='center', transform=ax[1].transAxes)
+        ax[1].text(0.85, 0.1, 'Predicted', horizontalalignment='center', verticalalignment='center', transform=ax[1].transAxes)
         plt.subplots_adjust(hspace = 0)
 
         plt.tight_layout()

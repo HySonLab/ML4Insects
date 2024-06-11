@@ -29,8 +29,7 @@ def process_config(json_file):
             raise RuntimeError(f'{json_file} not found')
     else: 
         config = get_config_from_json(json_file)
-
-    
+        
     time = str(datetime.datetime.now())[:-7]
     config.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     config.timestamp = time

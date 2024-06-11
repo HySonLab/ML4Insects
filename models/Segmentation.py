@@ -6,23 +6,38 @@ import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt 
 
-from utils import doc_utils, metrics, visualization
+from utils import utils, metrics, visualization
 from dataset_utils import datagenerator, dataloader, datahelper
 import time
 import datetime 
 import os 
+from tqdm import tqdm 
 
-def get_model(type):
-    if type == 'mlp':
-        return MLP()
-    elif type == 'fcn':
-        return FCN()
-    elif type == 'cnn2d':
-        return CNN2D()
-    elif type == 'resnet':
-        return ResNet()
-    else:
-        raise ValueError("Unsupported model type. Param model_type must be one of ['mlp', 'fcn', 'cnn2d', 'resnet']")
+def get_model(config):
+
+    if config.method == 'raw':
+        input_size = 1024
+        in_channels = 1
+    elif config.method == 'fft':
+        input_size = 513
+        in_channels = 1
+    elif config.method == 'wavelet': 
+        input_size = 515
+        in_channels = 4
+    if config.arch == 'mlp':
+        return MLP(input_size = input_size)
+    elif config.arch == 'cnn1d':
+        return CNN1D(input_size = input_size, in_channels = in_channels)
+    elif config.arch == 'resnet':
+        return ResNet(input_size = input_size, in_channels = in_channels)
+    elif config.arch == 'cnn2d':
+        if config.method == 'gaf':
+            input_size = 64
+        elif config.method == 'spectrogram':
+            input_size = 65
+        elif config.method == 'scalogram':
+            input_size = 65
+        return CNN2D(input_size = input_size)
 
 class EPGS:
     def __init__(self, config, random_state = 28):
@@ -33,7 +48,7 @@ class EPGS:
 
         # Model/ optimizers
         self.device = config.device
-        self.model = get_model(self.config.arch).to(self.device)        
+        self.model = get_model(self.config).to(self.device)        
         self.lr = config.lr 
         self.batch_size = config.batch_size
         if config.optimizer == 'Adam':
@@ -56,21 +71,34 @@ class EPGS:
         self.random_state = random_state
         self._is_model_trained = False 
         self._is_dataloaders_available = False
-        self.train_result_ = {'training_loss': [], 'training_accuracy': [], 'validation_loss': [], 'validation_accuracy': [], 
-                       'test_class_accuracy': [], 'test_score': [], 'test_confusion_matrix': [],
-                       'training_time' :0, 'data_processing_time':0, 'per_epoch_training_time': []}
+        self.train_result_ = {  'training_loss': [], 
+                                'training_accuracy': [], 
+                                'validation_loss': [],
+                                'validation_accuracy': [], 
+                                'test_class_accuracy': [], 
+                                'test_score': [], 
+                                'test_confusion_matrix': [],
+                                'training_time' :0, 
+                                'data_processing_time':0, 
+                                'per_epoch_training_time': []}
 
     def get_dataloaders(self, r = [0.7, 0.2, 0.1]):
         print('Obtaining dataloders ...')
-        dict = datagenerator.generate_inputs(self.dataset_name, verbose = True)
+        dict = datagenerator.generate_inputs(self.dataset_name, method = self.config.method, verbose = True)
         data, labels = dict['data'], dict['label']
+        if 'cnn' in self.model.__type__ :
+            if self.config.method != 'wavelet':
+                unsqueeze = True
         self.train_loader, self.val_loader, self.test_loader = dataloader.get_loaders(data, labels, 
                                                                                         r = [0.7, 0.2, 0.1], 
                                                                                         batch_size=self.batch_size, 
-                                                                                        model_type = self.model.__type__,
+                                                                                        unsqueeze = unsqueeze,
                                                                                         random_state = self.random_state)
         self._is_dataloaders_available = True 
-
+        
+    #######################################
+    ######### TRAINING ML MODELS ##########
+    #######################################
     def train_epoch(self):
         self.model.train()
         t0 = time.perf_counter()
@@ -83,11 +111,12 @@ class EPGS:
             predicted = torch.argmax(output.detach(),-1)
             n_samples += len(y_batch.ravel())
             n_correct += (predicted == y_batch).sum().item()     
-
+            
             loss = self.loss_fn(output,y_batch.ravel())
             training_loss += loss.item()
             self.optimizer.zero_grad()
             loss.backward()
+            # _ = torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.1)
             self.optimizer.step()
             
         training_loss = training_loss/(len(self.train_loader))
@@ -156,7 +185,7 @@ class EPGS:
 
         # Training loop
         t0 = time.perf_counter()
-        for epoch in range(self.n_epochs):
+        for epoch in tqdm(range(self.n_epochs), desc = 'Training'):
             
             tr_loss, tr_acc = self.train_epoch()
             val_loss, val_acc = self.evaluate(task = 'validate')
@@ -165,18 +194,13 @@ class EPGS:
                 if (epoch %10 == 0) or (epoch == self.n_epochs - 1):
                     print(f"Epoch [{epoch+1}/{self.n_epochs}] | Train loss: {tr_loss:.4f} | Val. loss: {val_loss:.4f} | Train acc: {tr_acc:.4f} | Val. acc: {val_acc:.4f}") 
 
-            if epoch == 20 or epoch == 50 or epoch == 99: 
-                self.evaluate(task = 'test')
-                self.write_train_log()
-                self.save_checkpoint(f'fcn_combined_{epoch}.json')     
-                   
             if early_stop == True:
                 if early_stopper.early_stop(self.train_result_['validation_loss'][-1]):   
                     if _is_early_stopped == False:   
                         print(f'Early stopping occured at epoch {epoch+1+patience} after {patience} epochs of changes less than {min_delta} in validation accuracy. Validation loss: {self.train_result_["validation_loss"][-1]:.4f}')       
                         # Test and save the checkpoint at early stopped epochs
                         _, _ = self.evaluate(task = 'test')
-                        self.save_checkpoint()
+                        self.save_checkpoint(f'early_stopped_{epoch}')
                         self.train_result_['early_stopping_epoch'] = epoch   
                         _is_early_stopped = True 
 
@@ -184,20 +208,10 @@ class EPGS:
         self._is_model_trained = True
         print('Finished training!') if verbose == True else None
 
-    def reset(self):
-        self._is_model_trained = False 
-        self.train_result_ = {'training_loss': [], 'training_accuracy': [], 'validation_loss': [], 'validation_accuracy': [], 
-                       'test_class_accuracy': [], 'test_score': [], 'test_confusion_matrix': [],
-                       'training_time' :0, 'data_processing_time':0, 'per_epoch_training_time': []}
-        self.model = get_model(self.config.arch).to(self.device)       
+    #######################################
+    ########## EPG SEGMENTATION ###########
+    #######################################
 
-    def load_checkpoint(self, path):
-        try:
-            self.model = torch.load(f'./checkpoints/{path}')
-        except:
-            self.model = torch.load(f'./checkpoints/{self.config.arch}/{path}')
-        self._is_model_trained = True
-    
     def segment(self, recording_name, verbose = False):
         # For Task 2: Output an analysis file (segmentation)
         if (self._is_model_trained == False):
@@ -221,11 +235,11 @@ class EPGS:
             self.input, self.true_segmentation = data
         else: 
             self.input = data
-            
         # Reshape and convert to torch.tensor
         input = torch.from_numpy(self.input).float().to(self.device)
         if self.model.__type__ == 'cnn':
-            input = input.unsqueeze(1)
+            if self.config.method != 'wavelet':
+                input = input.unsqueeze(1)
 
         # Predict each segment
         print('Generating segmentation ...') if verbose == True else None
@@ -245,11 +259,8 @@ class EPGS:
 
         # Scoring
         if self.ana is not None: 
-            results = metrics.scoring(self.true_segmentation, pred_segmentation)
-            self.scores = results['scores']
-            # self.scores['top-2_accuracy'] = np.round(top_k_accuracy(np.exp(self.log_pred_proba), self.true_segmentation, k = 2),2)
-            # print(f'Accuracy: {self.scores["accuracy"]}, Top-2 accuracy: {self.scores["top-2_accuracy"]}, f1: {self.scores["recall"]}') if verbose == True else None
-            print(f'Accuracy: {self.scores["accuracy"]}, f1: {self.scores["f1"]}') if verbose == True else None
+            self.overlap_rate = np.mean(self.true_segmentation == pred_segmentation)
+            print(f'Overlapping_rate: {self.overlap_rate}') if verbose == True else None
 
         # map to ground_truth labels  
         self.pred_segmentation = pd.Series(pred_segmentation).map({0: 1, 1: 2, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8}).to_numpy() 
@@ -257,35 +268,40 @@ class EPGS:
 
         return self.pred_ana 
 
+    #################################################
+    ########## PLOT/SAVE RESULT UTILITIES ###########
+    #################################################
+
     def save_analysis(self, name: str = ''):
 
         os.makedirs('./prediction/ANA', exist_ok = True)
         dir = os.listdir('./prediction/ANA')
         index = len(dir) + 1
         if name == '':
-            self.pred_ana.to_csv(f'./prediction/ANA/Untitled_{index}.ANA',sep = '\t',header = None,index=None)
+            save_name = f'./prediction/ANA/Untitled_{index}.ANA'
         else:
-            self.pred_ana.to_csv(f'./prediction/ANA/{name}.ANA',sep = '\t',header = None,index=None)
-                               
+            save_name = f'./prediction/ANA/{name}.ANA'
+        self.pred_ana.to_csv(save_name,sep = '\t',header = None,index=None)
+        print(f'Analysis saved to {save_name}')      
     def write_train_log(self):
-        doc_utils.write_training_log(self.model, self.config, self.train_result_)
+        utils.write_training_log(self.model, self.config, self.train_result_)
                             
     def plot_train_result(self, savefig = False):
-        doc_utils.plot_training_result(self.model, self.config, self.train_result_, savefig)
+        utils.plot_training_result(self.model, self.config, self.train_result_, savefig)
         
     def save_checkpoint(self, name = ''):
         date = str(datetime.date.today())
-        os.makedirs(f'./checkpoints/{self.model.__arch__}', exist_ok = True)
+        os.makedirs(f'./checkpoints', exist_ok = True)
 
         if name == '':
             saved_name = f'arch-{self.model.__arch__}.version-{self.model.__version__}.window-{self.config.window_size}.'
             saved_name += f'method-{self.config.method}.scale-{self.config.scale}.optimizer-{self.config.optimizer}.'
             saved_name += f'epochs-{self.config.n_epochs}.lr-{self.config.lr}.batchsize-{self.config.batch_size}'
+            save_path = f'./checkpoints/{self.model.__arch__}/{saved_name}.{date}.{self.config.exp_name}.json'
         else:
-            saved_name = name
-        dir = f'./checkpoints/{self.model.__arch__}/{saved_name}.{date}.{self.config.exp_name}.json'
-        torch.save(self.model, dir)
-        print(f'Parameters saved to "{dir}".')
+            save_path = f'./checkpoints/{self.model.__arch__}/{name}'
+        torch.save(self.model, save_path)
+        print(f'Parameters saved to {save_path}.')
 
     def plot_segmentation(self, which = 'pred_vs_gt', savefig = False, name: str = ''): 
         visualization.plot_gt_vs_pred_segmentation(self.recording, self.ana, self.pred_ana, which, savefig)
@@ -297,7 +313,22 @@ class EPGS:
            visualization.interactive_visualization(self.recording, self.ana, smoothen, title = which)
         else:
             raise ValueError("Param which must be either 'prediction' or 'ground_truth'.")
-            
+
+    def reset(self):
+        self._is_model_trained = False 
+        self.train_result_ = {'training_loss': [], 'training_accuracy': [], 'validation_loss': [], 'validation_accuracy': [], 
+                       'test_class_accuracy': [], 'test_score': [], 'test_confusion_matrix': [],
+                       'training_time' :0, 'data_processing_time':0, 'per_epoch_training_time': []}
+        self.model = get_model(self.config).to(self.device)       
+
+    def load_checkpoint(self, path):
+        try:
+            self.model = torch.load(f'./checkpoints/{path}')
+        except:
+            self.model = torch.load(f'./checkpoints/{self.config.arch}/{path}')
+        self._is_model_trained = True
+        print('Loading complete.')
+  
 def to_ana(segmentation):
     # create *.ANA file
     ana_time = [0]

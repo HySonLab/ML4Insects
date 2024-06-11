@@ -38,22 +38,21 @@ def get_MLmodel(name):
 XGB_params_grid = {'eta': [0.01, 0.1, 0.2, 0.3], 'n_estimators': [50,100, 200, 300],'max_depth': [3,4,5,6]}
 
 class EPGS_ML():
-    def __init__(self, config, task = 'train', random_state = 28):
+    def __init__(self, config, random_state = 28):
 
         self.config = config
-        self.model = get_MLmodel(config.model)
+        self.model = get_MLmodel(config.arch)
         self.dataset_name = config.dataset_name 
         
-        self.result_ = EasyDict({})
-        self.task = task 
+        self.classification_result_ = EasyDict({})
 
         self.random_state = random_state
         self._is_model_trained = False
         self._is_pretrained = False
 
     def reset(self):
-        self.model = dc(self.model_copy)
-        self.result_ = EasyDict({})
+        self.model = get_MLmodel(config.arch)
+        self.classification_result_ = EasyDict({})
     
     def fit(self, X_train, y_train):
         
@@ -65,7 +64,7 @@ class EPGS_ML():
         self.model.fit(self.X_train, self.y_train)
         t1 = time.perf_counter()
         training_time = round(t1 - t0, 3)
-        self.result_['training_time'] = training_time
+        self.classification_result_['training_time'] = training_time
         print(f'Finished training. Elapsed time: {training_time} (s)')
 
         self._is_model_trained = True 
@@ -83,9 +82,9 @@ class EPGS_ML():
         results = scoring(y_test, pred_windows)
         scores = results['scores']
         cf = results['confusion_matrix']
-        self.result_['class_acc'] = [cf[i,i] for i in range(cf.shape[0])]
-        self.result_['test_scores'] = scores
-        self.result_['test_confusion_matrix'] = cf
+        self.classification_result_['class_acc'] = [cf[i,i] for i in range(cf.shape[0])]
+        self.classification_result_['test_scores'] = scores
+        self.classification_result_['test_confusion_matrix'] = cf
         
         print(f"Accuracy: {scores['accuracy']}, f1: {scores['f1']}")
         print('Finished testing.')
@@ -107,21 +106,21 @@ class EPGS_ML():
     def write_cv_log(self):
 
         date = str(datetime.datetime.now())[:-7]
-        os.makedirs(f'log/{self.config.model}', exist_ok = True)
-        with open(f'log/{self.config.model}/cv_results.txt','a') as f:
-            f.writelines([f'Date: {date} | Model: {self.config.model} | Dataset: {self.config.dataset_name}\n'])
+        os.makedirs(f'log/{self.config.arch}', exist_ok = True)
+        with open(f'log/{self.config.arch}/cv_results.txt','a') as f:
+            f.writelines([f'Date: {date} | Model: {self.config.arch} | Dataset: {self.config.dataset_name}\n'])
             cv_summary_txt = [f'{key}: {self.cv_summary[key][0]} +- {self.cv_summary[key][1]}\n' for key in self.cv_summary.keys()]
             f.writelines(cv_summary_txt)
 
     def write_test_result(self):
         date = str(datetime.datetime.now())[:-7]
-        os.makedirs(f'log/{self.config.model}', exist_ok = True)        
-        with open(f'log/{self.config.model}/test_results.txt','a') as f:
-            f.writelines([f'Date: {date} | Model: {self.config.model} | Dataset: {self.config.dataset_name}\n'])
-            f.writelines([f"{s}: {self.result_['test_scores'][s]} \n" for s in self.result_['test_scores'].keys()])  
-            f.writelines(f'Class accuracy: {self.result_["class_acc"]}\n')  
+        os.makedirs(f'log/{self.config.arch}', exist_ok = True)        
+        with open(f'log/{self.config.arch}/test_results.txt','a') as f:
+            f.writelines([f'Date: {date} | Model: {self.config.arch} | Dataset: {self.config.dataset_name}\n'])
+            f.writelines([f"{s}: {self.classification_result_['test_scores'][s]} \n" for s in self.classification_result_['test_scores'].keys()])  
+            f.writelines(f'Class accuracy: {self.classification_result_["class_acc"]}\n')  
 
-    def segment(self, recording_name, return_score = True):
+    def segment(self, recording_name, is_FS = False, return_score = True):
 
         # Prepare data
         print('Generating segmentation ...')
@@ -131,16 +130,17 @@ class EPGS_ML():
         data = generate_sliding_windows(self.recording, self.ana, 
                                             window_size = self.config.window_size, 
                                             hop_length = test_hop_length, 
-                                            method = self.config.method, 
+                                            method = 'raw', 
                                             scale = self.config.scale, 
                                             task = 'test')
         if self.ana is not None:
-            
-            self.input = calculate_features(data[0])
+            self.input = calculate_features(data[0], method = self.config.method)
             self.true_segmentation = data[1]
         else:
-            self.input = calculate_features(input)
-
+            self.input = calculate_features(input, method = self.config.method)
+        selected_features = [5,6,9,10,11,12,17,18,22,23,24,25,30,31,35,36,37,38,43,44,48,49,50,51]
+        if is_FS == True:
+            self.input = self.input[:, selected_features]
         # Predict
         
 
@@ -156,8 +156,7 @@ class EPGS_ML():
 
         # Calculate overlapping rate
         accuracy = accuracy_score(self.true_segmentation, pred_segmentation) 
-        self.overlapping_rate = accuracy
-        # self.scores['top-2_accuracy'] = top_k_accuracy(self.pred_segm_proba, self.true_segmentation)
+        self.overlap_rate = accuracy
         print(f"Overlapping rate: {accuracy}")
 
         # map to ground_truth labels  
@@ -165,7 +164,7 @@ class EPGS_ML():
         self.pred_ana = to_ana(self.pred_segmentation) 
         
         if return_score == True:
-            return self.pred_ana, self.overlapping_rate
+            return self.pred_ana, self.overlap_rate
         else:
             return self.pred_ana
 
@@ -192,6 +191,8 @@ class EPGS_ML():
            visualization.interactive_visualization(self.wave_array, self.ana, smoothen, title = which)
         else:
             raise RuntimeError("Must input either 'prediction' or 'ground_truth' ")
+
+### Some utilities function 
 
 def to_ana(segmentation):
     # create *.ANA file

@@ -1,0 +1,11 @@
+Metadata-Version: 2.1
+Name: wavelets-pytorch
+Version: 0.1
+Summary: Wavelet Transform in PyTorch
+Home-page: https://github.com/tomrunia/PyTorchWavelets
+Author: Tom Runia
+Author-email: tomrunia@gmail.com
+License: MIT
+License-File: license.txt
+
+Fast CPU/CUDA implementation of the Continuous Wavelet Transform in PyTorch.

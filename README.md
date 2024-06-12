@@ -40,14 +40,31 @@ A nice feature of EPGS is the ability to create color plot of an input recording
 
 ![ML4Insects](/figures/prediction.png "Example of a prediction segmentation vs the ground-truth version. The overlap rate is 95%.")
 
-## Citation
+## Please cite our paper with
+
+```bibtex
+@article {Dinh2024.06.10.598170,
+	author = {Dinh, Quang-Dung and Kunk, Daniel and Hy, Truong Son and Nalam, Vamsi J and Dao, Phuong},
+	title = {Machine learning for characterizing plant-insect interactions through electrical penetration graphic signal},
+	elocation-id = {2024.06.10.598170},
+	year = {2024},
+	doi = {10.1101/2024.06.10.598170},
+	publisher = {Cold Spring Harbor Laboratory},
+	abstract = {The electrical penetration graph (EPG) is a well-known technique that provides insights into the feeding behavior of insects with piercing-sucking mouthparts, mostly hemipterans. Since its inception in the 1960s, EPG has become indispensable in studying plant-insect interactions, revealing critical information about host plant selection, plant resistance, virus transmission, and responses to environmental factors. By integrating the plant and insect into an electrical circuit, EPG allows researchers to identify specific feeding behaviors based on distinct waveform patterns associated with activities within plant tissues. However, the traditional manual analysis of EPG waveform data is time-consuming and labor-intensive, limiting research throughput. This study presents a novel machine-learning approach to automate the segmentation and classification of EPG signals. We rigorously evaluated six diverse machine learning models, including neural networks, tree-based models, and logistic regressions, using an extensive dataset from aphid feeding experiments. Our results demonstrate that a Residual Network (ResNet) architecture achieved the highest overall waveform classification accuracy of 96.8\% and highest segmentation overlap rate of 84.4\%, highlighting the potential of machine learning for accurate and efficient EPG analysis. This automated approach promises to accelerate research in this field significantly and has the potential to be generalized to other insect species and experimental settings. Our findings underscore the value of applying advanced computational techniques to complex biological datasets, paving the way for a more comprehensive understanding of insect-plant interactions and their broader ecological implications. The source code for all experiments conducted within this study is publicly available at https://github.com/HySonLab/ML4InsectsCompeting Interest StatementThe authors have declared no competing interest.},
+	URL = {https://www.biorxiv.org/content/early/2024/06/11/2024.06.10.598170},
+	eprint = {https://www.biorxiv.org/content/early/2024/06/11/2024.06.10.598170.full.pdf},
+	journal = {bioRxiv}
+}
+```
+
+# Contributors
+* Quang-Dung Dinh
+* Truong Son Hy (PI)
+* Phuong Dao (PI)
+
+## References
 [1.](https://onlinelibrary.wiley.com/doi/10.1111/j.1570-7458.1978.tb02836.x) Tjallingii WF. Electronic Recording of Penetration Behaviour by Aphids Entomologia Experimentalis et Applicata. 1978; 24(3): 721–730.
 
 [2.](https://ieeexplore.ieee.org/document/9973221) J. Van Der Donckt, J. Van der Donckt, E. Deprost and S. Van Hoecke, "Plotly-Resampler: Effective Visual Analytics for Large Time Series," 2022 IEEE Visualization and Visual Analytics (VIS), Oklahoma City, OK, USA, 2022, pp. 21-25, doi: 10.1109/VIS54862.2022.00013 . [GitHub](https://github.com/predict-idlab/plotly-resampler) 
 
 [3.](https://link.springer.com/article/10.1007/s11263-019-01194-0) Runia, T.F.H., Snoek, C.G.M. & Smeulders, A.W.M. Repetition Estimation. Int J Comput Vis 127, 1361–1383 (2019). https://doi.org/10.1007/s11263-019-01194-0. [GitHub](https://github.com/tomrunia/PyTorchWavelets) \
-
-# Contributors
-* Quang Dung Dinh
-* Truong Son Hy
-* Phuong Dao

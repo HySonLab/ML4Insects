@@ -67,4 +67,4 @@ A nice feature of EPGS is the ability to create color plot of an input recording
 
 [2.](https://ieeexplore.ieee.org/document/9973221) J. Van Der Donckt, J. Van der Donckt, E. Deprost and S. Van Hoecke, "Plotly-Resampler: Effective Visual Analytics for Large Time Series," 2022 IEEE Visualization and Visual Analytics (VIS), Oklahoma City, OK, USA, 2022, pp. 21-25, doi: 10.1109/VIS54862.2022.00013 . [GitHub](https://github.com/predict-idlab/plotly-resampler) 
 
-[3.](https://link.springer.com/article/10.1007/s11263-019-01194-0) Runia, T.F.H., Snoek, C.G.M. & Smeulders, A.W.M. Repetition Estimation. Int J Comput Vis 127, 1361–1383 (2019). https://doi.org/10.1007/s11263-019-01194-0. [GitHub](https://github.com/tomrunia/PyTorchWavelets) 
+[3.](https://link.springer.com/article/10.1007/s11263-019-01194-0) Runia, T.F.H., Snoek, C.G.M. & Smeulders, A.W.M. Repetition Estimation. Int J Comput Vis 127, 1361–1383 (2019). [GitHub](https://github.com/tomrunia/PyTorchWavelets) 

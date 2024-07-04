@@ -54,15 +54,13 @@ class EPGDataset:
                 newname = f'{prefix}{name}'
                 os.rename(f'{self.data_path}/{self.dataset_name}_ANA/{name}',f'{self.data_path}/{self.dataset_name}_ANA/{newname}')
         
-    def plot(self, recording_name, title = '', mode = 'static', smoothen = False):
-        if isinstance(recording_name, int):
-            recording_name = self.recordings[recording_name]
-        recording, ana = read_signal(recording_name, data_path=self.data_path)
+    def plot(self, idx, mode = 'static', smoothen = False):
+        recording, ana = self.recordings[idx]['recording'], self.recordings[idx]['ana']
         plt.figure(figsize = (18,3))
         if mode == 'static':
-            visualize_signal(recording, ana, title = title)
+            visualize_signal(recording, ana, title = self.recordings[idx]['name'])
         elif mode == 'interactive':
-            interactive_visualization(recording, ana, smoothen= smoothen, title = title)
+            interactive_visualization(recording, ana, smoothen= smoothen, title = self.recordings[idx]['name'])
 
     def generate_sliding_windows(self, window_size = 1024, hop_length = 1024, method = 'raw', scale = True):
 

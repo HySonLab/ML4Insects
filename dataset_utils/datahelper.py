@@ -50,7 +50,7 @@ def get_dataset_group(group):
             raise ValueError('Unsupported value.')
 
 # ============================= Label map =============================
-waveform_labels = ['np', 'c', 'e1', 'e2', 'f', 'g', 'pd']
+waveform_labels = ['NP', 'C', 'E1', 'E2', 'F', 'G', 'pd']
 ana_labels = [1, 2, 4, 5, 6, 7, 8]
 encoded_labels = [0, 1, 2, 3, 4, 5, 6]
 
@@ -124,34 +124,34 @@ def get_index(ana):
         start, end = ana.loc[i:i+1,'time'].tolist()
         if ana.loc[i,'label'] == 1:
             try:
-                index['np'].append([start,end])
+                index['NP'].append([start,end])
             except:
-                index['np'] = [[start,end]]
+                index['NP'] = [[start,end]]
         elif ana.loc[i,'label'] == 2:
             try:
-                index['c'].append([start,end])
+                index['C'].append([start,end])
             except:
-                index['c'] = [[start,end]]
+                index['C'] = [[start,end]]
         elif ana.loc[i,'label'] == 4:
             try:
-                index['e1'].append([start,end])
+                index['E1'].append([start,end])
             except:
-                index['e1'] = [[start,end]]
+                index['E1'] = [[start,end]]
         elif ana.loc[i,'label'] == 5:
             try:
-                index['e2'].append([start,end])
+                index['E2'].append([start,end])
             except:
-                index['e2'] = [[start,end]]
+                index['E2'] = [[start,end]]
         elif ana.loc[i,'label'] == 6:
             try:
-                index['f'].append([start,end])
+                index['F'].append([start,end])
             except:
-                index['f'] = [[start,end]]
+                index['F'] = [[start,end]]
         elif ana.loc[i,'label'] == 7:
             try:
-                index['g'].append([start,end])
+                index['G'].append([start,end])
             except:
-                index['g'] = [[start,end]]
+                index['G'] = [[start,end]]
         elif ana.loc[i,'label'] == 8:
             try:
                 index['pd'].append([start,end])

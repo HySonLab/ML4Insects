@@ -21,7 +21,7 @@ def train_validation_test_split(data, labels, r = [0.7, 0.1, 0.2], random_state 
     
     return x_train, x_val, x_test, y_train, y_val, y_test 
 
-def to_tensor_split(split, device = 'cuda', model_type = 'mlp'):
+def to_tensor_split(split, device = 'cuda', unsqueeze = False):
     
     x_train, x_val, x_test, y_train, y_val, y_test = split
     ### To torch.tensor 
@@ -34,14 +34,14 @@ def to_tensor_split(split, device = 'cuda', model_type = 'mlp'):
     y_test = torch.from_numpy(y_test).long().to(device)
 
     ### Reshape
-    if model_type == 'cnn':
+    if unsqueeze == True:
         return x_train.unsqueeze(1), x_val.unsqueeze(1), x_test.unsqueeze(1), y_train, y_val, y_test
     else:
         return x_train, x_val, x_test, y_train, y_val, y_test
 
-def get_loaders(data, labels, r = [0.7, 0.1, 0.2], batch_size = 32, random_state = 28, device = 'cuda', model_type = 'mlp'):
+def get_loaders(data, labels, r = [0.7, 0.1, 0.2], batch_size = 32, random_state = 28, device = 'cuda', unsqueeze = False):
     x_train, x_val, x_test, y_train, y_val, y_test = to_tensor_split( train_validation_test_split(data, labels, r = r, random_state = 28),
-                                                                        device, model_type )
+                                                                        device, unsqueeze )
 
     train_dataset = custom_dataset(x_train,y_train)
     val_dataset = custom_dataset(x_val,y_val)

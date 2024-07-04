@@ -101,8 +101,8 @@ class EPGDataset:
 
     def datasetSummary(self):
 
-        durations = {'np': [], 'c': [], 'e1': [], 'e2': [], 'f': [], 'g': [], 'pd': []}
-        counts = {'np': 0, 'c': 0, 'e1': 0, 'e2': 0, 'f': 0, 'g': 0, 'pd': 0}
+        durations = {'NP': [], 'C': [], 'E1': [], 'E2': [], 'F': [], 'G': [], 'pd': []}
+        counts = {'NP': 0, 'C': 0, 'E1': 0, 'E2': 0, 'F': 0, 'G': 0, 'pd': 0}
         total_length = 0
         n = len(self.recordings)
         
@@ -118,7 +118,7 @@ class EPGDataset:
             total_length += recAna.iloc[-1]['time']
         self.durations = durations
         
-        # stats = {'np': [], 'c': [], 'e1': [], 'e2': [], 'f': [], 'g': [], 'pd': []}
+        # stats = {'NP': [], 'C': [], 'E1': [], 'E2': [], 'F': [], 'G': [], 'pd': []}
         stats = []
         for waveform in durations.keys():
             count = counts[waveform]
@@ -135,5 +135,5 @@ class EPGDataset:
         
         self.statistics = pd.DataFrame(stats)
         self.statistics.columns = ['count', 'ratio', 'mean', 'std', 'max', 'min', 'median', 'Q1', 'Q3']
-        self.statistics.index = ['np', 'c', 'e1', 'e2', 'f', 'g', 'pd']
+        self.statistics.index = ['NP', 'C', 'E1', 'E2', 'F', 'G', 'pd']
         return self.statistics

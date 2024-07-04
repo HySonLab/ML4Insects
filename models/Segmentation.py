@@ -84,7 +84,7 @@ class EPGS:
 
     def get_dataloaders(self, r = [0.7, 0.2, 0.1]):
         print('Obtaining dataloders ...')
-        dict = datagenerator.generate_inputs(self.dataset_name, method = self.config.method, verbose = True)
+        dict = datagenerator.generate_inputs(self.data_path, self.dataset_name, method = self.config.method, verbose = True)
         data, labels = dict['data'], dict['label']
         if 'cnn' in self.model.__type__ :
             if self.config.method != 'wavelet':

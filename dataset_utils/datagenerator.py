@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import librosa
+import os
 from .datahelper import read_signal, format_data, get_filename, get_dataset_group, create_map, ana_labels, encoded_labels
 from utils.preprocessing import quantile_filter
 from sklearn.preprocessing import MinMaxScaler
@@ -9,7 +10,7 @@ from tqdm import tqdm
 # from utils.augmentation import *
 
 
-def generate_sliding_windows(   wave_array, 
+def generate_sliding_windows(   recording, 
                                 ana_file, 
                                 window_size:int, 
                                 hop_length: int, 
@@ -21,7 +22,7 @@ def generate_sliding_windows(   wave_array,
         ----------
         Arguments
         ----------
-            wave_array: input signal
+            recording: input signal
             ana_file: corresponding analysis file 
             window_size: length of the sliding window
             hop_length: sliding length
@@ -36,11 +37,11 @@ def generate_sliding_windows(   wave_array,
     '''
     # preprocessing 
     if outlier_filter == True:
-        wave_array = quantile_filter(wave_array)
+        recording = quantile_filter(recording)
     if scale == True:
-        # wave_array = minmax_softscale(wave_array)
+        # recording = minmax_softscale(recording)
         scaler = MinMaxScaler() # Scale the data to (0,1)
-        wave_array = scaler.fit_transform(wave_array.reshape(-1,1)).squeeze(1)
+        recording = scaler.fit_transform(recording.reshape(-1,1)).squeeze(1)
 
     if ana_file is not None:
         ana = dc(ana_file)
@@ -69,10 +70,10 @@ def generate_sliding_windows(   wave_array,
 
             n_window = ((end-start)-window_size)//hop_length + 1
             for k in range(n_window):
-                if start + k*hop_length + window_size > len(wave_array):
+                if start + k*hop_length + window_size > len(recording):
                     break
                 idx = np.arange(start + k*hop_length, start + k*hop_length + window_size)
-                slice = wave_array[idx]
+                slice = recording[idx]
                 features = extract_features(slice, method, window_size)
                 d.append(features)
                 l.append(wave_type)
@@ -85,10 +86,10 @@ def generate_sliding_windows(   wave_array,
 
     elif task == 'test':
         
-        n_windows = (len(wave_array)-window_size)//hop_length + 1
+        n_windows = (len(recording)-window_size)//hop_length + 1
         for i in range(n_windows):
             idx = np.arange(i*hop_length, i*hop_length + window_size)
-            slice = wave_array[idx]
+            slice = recording[idx]
             features = extract_features(slice, method, window_size)
             d.append(features)
 
@@ -103,14 +104,15 @@ def generate_sliding_windows(   wave_array,
         else:
             return d
 
-def generate_inputs(   dataset_name, 
-                                window_size = 1024, 
-                                hop_length = 1024, 
-                                method= 'raw', 
-                                outlier_filter: bool = False, 
-                                scale: bool = True, 
-                                pad_and_slice = True, 
-                                verbose = False):
+def generate_inputs(    data_path,
+                        dataset_name, 
+                        window_size = 1024, 
+                        hop_length = 1024, 
+                        method= 'raw', 
+                        outlier_filter: bool = False, 
+                        scale: bool = True, 
+                        pad_and_slice = True, 
+                        verbose = False):
     '''
         ----------
         Arguments
@@ -123,19 +125,17 @@ def generate_inputs(   dataset_name,
             d: dictionaries of training/testing data with keys {'data', 'label'}
     '''
 
-    subdatasets = get_dataset_group(dataset_name)
-
     count = 0
     d = []; l = []  
-    for subset in subdatasets:
-        print(f'Sub-dataset {subset}.')
-        all_recordings = get_filename(subset)
-        for n in tqdm(all_recordings):
+    
+    all_recordings = os.listdir(f'{data_path}/{dataset_name}')
+    all_recordings = set([x[:-4] for x in all_recordings])
 
-            df, ana = read_signal(n)
-            features, labels = generate_sliding_windows(df, ana, window_size, hop_length, method, outlier_filter, scale, True, 'train')
-            d.append(features); l.append(labels)
-            count+=1
+    for name in tqdm(all_recordings):
+        df, ana = read_signal(name)
+        features, labels = generate_sliding_windows(df, ana, window_size, hop_length, method, outlier_filter, scale, True, 'train')
+        d.append(features); l.append(labels)
+        count+=1
 
     d = np.concatenate([f for f in d])
     l = np.concatenate([lab for lab in l])
@@ -143,8 +143,8 @@ def generate_inputs(   dataset_name,
     d = format_data(d, l)
 
     if verbose == True:
-        print(f'Read {count} recordings')
-        print(f'Signal processing method: {method} | Outliers filtering: {str(outlier_filter)} | Scale: {str(scale)}')
+        print(f'Total: {count} recordings')
+        print(f'Signal processing method: {method} | Scale: {str(scale)}')
         cl, c = np.unique(l, return_counts=True)
         print('Class distribution (label:ratio): '+ ', '.join(f'{cl[i]}: {round(c[i]/len(l),2)}' for i in range(len(cl))))
         print(f'Labels map (from:to): {{1: 0, 2: 1, 4: 2, 5: 3, 6: 4, 7: 5, 8: 6}}')

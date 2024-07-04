@@ -1,5 +1,6 @@
 import os
 import pandas as pd 
+import glob
 from easydict import EasyDict 
 from copy import deepcopy as dc
 
@@ -86,16 +87,12 @@ def read_signal(filename: str, data_path = '../data') -> tuple:
     '''
     # Read signals
     d = []
-    source = filename.split('_')[0]
-    dir = os.listdir(f'{data_path}/{source}')
-    dir = [d[:-4] for d in dir]
-    n_extension = dir.count(dir[0])
+    dataset_name = filename.split('_')[0]
+    dir = os.listdir(f'{data_path}/{dataset_name}')
+    rec_components = glob.glob(f'{data_path}/{dataset_name}/{filename}.*')
 
-    extension = [f'.A{n+1:02}' for n in range(n_extension)]
-    
     # Read the signal (.A0x) files
-    for i in range(len(extension)):
-        file_path = f'{data_path}/{source}/{filename}{extension[i]}'
+    for file_path in rec_components:
         x = pd.read_csv(file_path, low_memory = False, delimiter=";", header = None, usecols=[1])
         d.append(x)
     data = pd.concat(d)
@@ -103,7 +100,7 @@ def read_signal(filename: str, data_path = '../data') -> tuple:
 
     # Read the analysis (.ANA) files
     try:
-        ana_path = f'{data_path}/{source}_ANA/{filename}.ANA'
+        ana_path = f'{data_path}/{dataset_name}_ANA/{filename}.ANA'
         ana = pd.read_csv(ana_path, encoding='utf-16', delimiter = '\t',header = None, usecols=[0,1])
         ana.columns = ['label','time']
         ana = ana[(ana['label'] != 9) & (ana['label'] != 10) & (ana['label'] != 11)]

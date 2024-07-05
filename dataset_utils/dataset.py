@@ -5,9 +5,8 @@ from tqdm import tqdm
 import time
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt 
-
-from dataset_utils.datahelper import get_dataset_group, read_signal, get_filename, get_index, extract_sample
-from dataset_utils.datagenerator import generate_inputs
+from dataset_utils.datahelper import format_data, read_signal, get_index
+from dataset_utils.datagenerator import generate_sliding_windows_single
 from utils.visualization import visualize_signal, interactive_visualization
 
 class EPGDataset:
@@ -62,10 +61,49 @@ class EPGDataset:
         elif mode == 'interactive':
             interactive_visualization(recording, ana, smoothen= smoothen, title = self.recordings[idx]['name'])
 
-    def generate_sliding_windows(self, window_size = 1024, hop_length = 1024, method = 'raw', scale = True):
-
+    def generate_sliding_windows(   self,
+                                    window_size = 1024, 
+                                    hop_length = 1024, 
+                                    method= 'raw', 
+                                    outlier_filter: bool = False, 
+                                    scale: bool = True, 
+                                    pad_and_slice = True, 
+                                    verbose = False):
+        '''
+            ----------
+            Arguments
+            ----------
+                config: configuration files containing necessary info
+                verbose: if True, print descriptions
+            --------
+            Return
+            --------
+                d: dictionaries of training/testing data with keys {'data', 'label'}
+        '''
         print('Generating sliding windows ...')
-        d = generate_inputs(self.data_path, self.dataset_name, window_size, hop_length, method, verbose = True)
+        count = 0
+        d = []; l = []  
+        
+        for rec in tqdm(self.recordings):
+            recRecording = rec['recording']
+            recAna = rec['ana']
+            features, labels = generate_sliding_windows_single(recRecording, recAna, window_size, hop_length, 
+                                                                method, outlier_filter, scale, True, 'train')
+            d.append(features); l.append(labels)
+            count+=1
+
+        d = np.concatenate([f for f in d])
+        l = np.concatenate([lab for lab in l])
+        
+        d = format_data(d, l)
+
+        if verbose == True:
+            print(f'Total: {count} recordings')
+            print(f'Signal processing method: {method} | Scale: {str(scale)}')
+            cl, c = np.unique(l, return_counts=True)
+            print('Class distribution (label:ratio): '+ ', '.join(f'{cl[i]}: {round(c[i]/len(l),2)}' for i in range(len(cl))))
+            print(f'Labels map (from:to): {{1: 0, 2: 1, 4: 2, 5: 3, 6: 4, 7: 5, 8: 6}}')
+
         self.windows, self.labels = d['data'], d['label']
         self.waveforms, self.distributions = np.unique(self.labels, return_counts= True)
         n = len(self.waveforms)
@@ -137,3 +175,5 @@ class EPGDataset:
         self.statistics.columns = ['count', 'ratio', 'mean', 'std', 'max', 'min', 'median', 'Q1', 'Q3']
         self.statistics.index = ['NP', 'C', 'E1', 'E2', 'F', 'G', 'pd']
         return self.statistics
+
+

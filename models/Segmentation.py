@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from utils import utils, metrics, visualization
 from dataset_utils import datagenerator, dataloader, datahelper
+from dataset_utils.dataset import EPGDataset
 import time
 import datetime 
 import os 
@@ -42,10 +43,10 @@ def get_model(config):
 class EPGS:
     def __init__(self, config, random_state = 28):
         self.config = config
-        # Data path
+        # Dataset
         self.data_path = config.data_path 
         self.dataset_name = config.dataset_name
-
+        self.dataset = EPGDataset(self.data_path, self.dataset_name)
         # Model/ optimizers
         self.device = config.device
         self.model = get_model(self.config).to(self.device)        
@@ -84,8 +85,12 @@ class EPGS:
 
     def get_dataloaders(self, r = [0.7, 0.2, 0.1]):
         print('Obtaining dataloders ...')
-        dict = datagenerator.generate_inputs(self.data_path, self.dataset_name, method = self.config.method, verbose = True)
-        data, labels = dict['data'], dict['label']
+        self.dataset.generate_sliding_windows(  window_size = self.window_size, 
+                                                hop_length  = self.hop_length, 
+                                                method      = self.config.method,
+                                                scale       = self.scale,
+                                                verbose     = True)
+        data, labels = self.dataset.windows, self.dataset.labels
         if 'cnn' in self.model.__type__ :
             if self.config.method != 'wavelet':
                 unsqueeze = True

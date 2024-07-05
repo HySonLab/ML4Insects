@@ -1,23 +1,19 @@
 import numpy as np
 import pandas as pd
 import librosa
-import os
-from .datahelper import read_signal, format_data, get_filename, get_dataset_group, create_map, ana_labels, encoded_labels
+from .datahelper import create_map, ana_labels, encoded_labels
 from utils.preprocessing import quantile_filter
 from sklearn.preprocessing import MinMaxScaler
 from copy import deepcopy as dc
-from tqdm import tqdm
-# from utils.augmentation import *
 
-
-def generate_sliding_windows(   recording, 
-                                ana_file, 
-                                window_size:int, 
-                                hop_length: int, 
-                                method= 'raw', 
-                                outlier_filter: bool = False, 
-                                scale: bool = True, 
-                                pad_and_slice = True, task = 'train'):
+def generate_sliding_windows_single(   recording, 
+                                        ana_file, 
+                                        window_size:int, 
+                                        hop_length: int, 
+                                        method= 'raw', 
+                                        outlier_filter: bool = False, 
+                                        scale: bool = True, 
+                                        pad_and_slice = True, task = 'train'):
     '''
         ----------
         Arguments
@@ -103,53 +99,6 @@ def generate_sliding_windows(   recording,
             return d, dense_labels
         else:
             return d
-
-def generate_inputs(    data_path,
-                        dataset_name, 
-                        window_size = 1024, 
-                        hop_length = 1024, 
-                        method= 'raw', 
-                        outlier_filter: bool = False, 
-                        scale: bool = True, 
-                        pad_and_slice = True, 
-                        verbose = False):
-    '''
-        ----------
-        Arguments
-        ----------
-            config: configuration files containing necessary info
-            verbose: if True, print descriptions
-        --------
-        Return
-        --------
-            d: dictionaries of training/testing data with keys {'data', 'label'}
-    '''
-
-    count = 0
-    d = []; l = []  
-    
-    all_recordings = os.listdir(f'{data_path}/{dataset_name}')
-    all_recordings = set([x[:-4] for x in all_recordings])
-
-    for name in tqdm(all_recordings):
-        df, ana = read_signal(name)
-        features, labels = generate_sliding_windows(df, ana, window_size, hop_length, method, outlier_filter, scale, True, 'train')
-        d.append(features); l.append(labels)
-        count+=1
-
-    d = np.concatenate([f for f in d])
-    l = np.concatenate([lab for lab in l])
-    
-    d = format_data(d, l)
-
-    if verbose == True:
-        print(f'Total: {count} recordings')
-        print(f'Signal processing method: {method} | Scale: {str(scale)}')
-        cl, c = np.unique(l, return_counts=True)
-        print('Class distribution (label:ratio): '+ ', '.join(f'{cl[i]}: {round(c[i]/len(l),2)}' for i in range(len(cl))))
-        print(f'Labels map (from:to): {{1: 0, 2: 1, 4: 2, 5: 3, 6: 4, 7: 5, 8: 6}}')
-
-    return d
 
 def extract_features(window, method, window_size):
     if method == 'fft':

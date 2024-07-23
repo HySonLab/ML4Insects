@@ -1,0 +1,17 @@
+numpy 
+pandas
+matplotlib
+seaborn
+PyWavelets
+librosa
+torch
+easydict
+scikit-learn
+xgboost
+scipy
+plotly
+plotly-resampler
+ipywidgets
+nbformat
+pyts
+tqdm 

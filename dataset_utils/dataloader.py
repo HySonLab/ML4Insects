@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
-
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 class custom_dataset(Dataset):
     def __init__(self,X,y):
         self.X = X
@@ -21,7 +21,7 @@ def train_validation_test_split(data, labels, r = [0.7, 0.1, 0.2], random_state 
     
     return x_train, x_val, x_test, y_train, y_val, y_test 
 
-def to_tensor_split(split, device = 'cuda', unsqueeze = False):
+def to_tensor_split(split, unsqueeze = False):
     
     x_train, x_val, x_test, y_train, y_val, y_test = split
     ### To torch.tensor 
@@ -39,9 +39,9 @@ def to_tensor_split(split, device = 'cuda', unsqueeze = False):
     else:
         return x_train, x_val, x_test, y_train, y_val, y_test
 
-def get_loaders(data, labels, r = [0.7, 0.1, 0.2], batch_size = 32, random_state = 28, device = 'cuda', unsqueeze = False):
-    x_train, x_val, x_test, y_train, y_val, y_test = to_tensor_split( train_validation_test_split(data, labels, r = r, random_state = 28),
-                                                                        device, unsqueeze )
+def get_loaders(data, labels, r = [0.7, 0.1, 0.2], batch_size = 32, random_state = 28, unsqueeze = False):
+    x_train, x_val, x_test, y_train, y_val, y_test \
+        = to_tensor_split( train_validation_test_split(data, labels, r = r, random_state = 28),unsqueeze )
 
     train_dataset = custom_dataset(x_train,y_train)
     val_dataset = custom_dataset(x_val,y_val)

@@ -1,1 +1,0 @@
-{"exp_name": "BCOA1", "dataset_name": 1, "window_size": 1024, "hop_length": 1024, "arch": "XGB", "method": "wavelet", "scale": true, "outlier_filter": false, "n_epochs": 100, "scope": 1, "data_path": "../"}

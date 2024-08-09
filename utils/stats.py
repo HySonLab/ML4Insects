@@ -147,13 +147,6 @@ def permutation_entropy(time_series, order=3, delay=1, normalize=False):
         pe /= np.log2(np.math.factorial(order))
     return pe
 
-def moving_average(array, window = 3):
-    smooth_array = dc(array)
-    h = (window-1)//2
-    for i in range(h, len(array) - h):
-        smooth_array[i] = np.median(array[i-h:i+h+1])
-    return np.array(smooth_array)
-
 def GASF_GADF(arr):
     array = arr.reshape(-1,1)
     max = array.max()

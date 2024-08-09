@@ -14,6 +14,8 @@ import datetime
 import os 
 from tqdm import tqdm 
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 def get_model(config):
 
     if config.method == 'raw':
@@ -40,15 +42,17 @@ def get_model(config):
             input_size = 65
         return CNN2D(input_size = input_size)
 
-class EPGS:
+class EPGSegment:
     def __init__(self, config, random_state = 28):
         self.config = config
+
         # Dataset
         self.data_path = config.data_path 
         self.dataset_name = config.dataset_name
         self.dataset = EPGDataset(self.data_path, self.dataset_name)
+        
         # Model/ optimizers
-        self.device = config.device
+        self.device = device
         self.model = get_model(self.config).to(self.device)        
         self.lr = config.lr 
         self.batch_size = config.batch_size
@@ -72,6 +76,8 @@ class EPGS:
         self.random_state = random_state
         self._is_model_trained = False 
         self._is_dataloaders_available = False
+
+        # Result
         self.train_result_ = {  'training_loss': [], 
                                 'training_accuracy': [], 
                                 'validation_loss': [],
@@ -265,7 +271,7 @@ class EPGS:
         # Scoring
         if self.ana is not None: 
             self.overlap_rate = np.mean(self.true_segmentation == pred_segmentation)
-            print(f'Overlapping_rate: {self.overlap_rate}') if verbose == True else None
+            print(f'Overlap rate: {self.overlap_rate}') if verbose == True else None
 
         # map to ground_truth labels  
         self.pred_segmentation = pd.Series(pred_segmentation).map({0: 1, 1: 2, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8}).to_numpy() 

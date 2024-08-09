@@ -1,6 +1,9 @@
-from sklearn.model_selection import cross_validate
+from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.metrics import accuracy_score
 from utils.metrics import scoring
+import pywt
+from scipy.stats import skew
+from utils.stats import calculate_statistics
 
 from copy import deepcopy as dc
 import matplotlib.pyplot as plt
@@ -10,10 +13,10 @@ import time
 from easydict import EasyDict
 import datetime 
 import os
-
-from dataset_utils.MLdatagenerator import calculate_features
+from tqdm import tqdm 
+from dataset_utils.datagenerator import generate_sliding_windows_single
 from dataset_utils.datahelper import read_signal
-from dataset_utils.datagenerator import generate_sliding_windows
+from dataset_utils.dataset import EPGDataset
 from utils import visualization
 
 # ======================= MODEL ===========================
@@ -37,23 +40,81 @@ def get_MLmodel(name):
 # For Grid Search on XGB
 XGB_params_grid = {'eta': [0.01, 0.1, 0.2, 0.3], 'n_estimators': [50,100, 200, 300],'max_depth': [3,4,5,6]}
 
-class EPGS_ML():
+class EPGSegmentML():
     def __init__(self, config, random_state = 28):
 
-        self.config = config
-        self.model = get_MLmodel(config.arch)
-        self.dataset_name = config.dataset_name 
-        
-        self.classification_result_ = EasyDict({})
+        # Dataset
+        self.data_path = config.data_path 
+        self.dataset_name = config.dataset_name
+        self.dataset = EPGDataset(self.data_path, self.dataset_name)
 
+        # Model/ optimizers
+        self.config = config
+        self.device = config.device        
+        self.model = get_MLmodel(config.arch)
+
+        # Configs for inputs
+        self.window_size = config.window_size
+        self.hop_length = config.hop_length
+        self.scope = config.scope
+        self.method = config.method 
+        self.scale = config.scale 
+
+        # Environment
         self.random_state = random_state
         self._is_model_trained = False
         self._is_pretrained = False
 
+        # Result
+        self.classification_result_ = EasyDict({})
+
     def reset(self):
         self.model = get_MLmodel(config.arch)
         self.classification_result_ = EasyDict({})
-    
+
+    def get_traindata(self, test_size = 0.2):
+        if os.path.exists(f'{self.data_path}/dataML/Label_{self.dataset_name}_train.csv'):
+            print('Warning. Training data existed.')
+            inp = input('Continue? (Y/N)')
+            if inp == 'Y':
+                pass
+            elif inp == 'N':
+                return 
+        self.dataset.generate_sliding_windows(  window_size     = self.window_size, 
+                                                hop_length      = self.hop_length, 
+                                                scale           = self.scale, 
+                                                method          = 'raw', 
+                                                # outlier_filter = False, 
+                                                # pad_and_slice = True, 
+                                                verbose         = True)
+        data, labels = self.dataset.windows, self.dataset.labels
+
+        # Compute features
+        t0 = time.perf_counter() # Time counter
+        
+        X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size = 0.2, random_state = 28, stratify = labels)
+
+        print('Computing training features matrices ...')
+        X_train = calculate_features(X_train, method = self.method)
+
+        print('Computing testing features matrices ...')
+        X_test = calculate_features(X_test, method = self.method)
+
+        t1 = time.perf_counter() # Time counter
+
+        print(f'Dataset {self.dataset_name}. Elapsed computation time: {t1-t0}')
+
+        # Save as .csv
+        print('Saving datasets to .csv ...')
+        os.makedirs(f'{self.data_path}/dataML', exist_ok = True)
+        pd.DataFrame(y_train).to_csv(f'{self.data_path}/dataML/Label_{self.dataset_name}_train.csv',header = None, index= None)
+        pd.DataFrame(y_test).to_csv(f'{self.data_path}/dataML/Label_{self.dataset_name}_test.csv',header = None, index= None)
+        pd.DataFrame(X_train).to_csv(f'{self.data_path}/dataML/Data_{self.dataset_name}_train.csv',header = None, index= None)
+        pd.DataFrame(X_test).to_csv(f'{self.data_path}/dataML/Data_{self.dataset_name}_test.csv',header = None, index= None)
+        
+        # f = open(f'{self.data_path}/log/features_computation_time.txt', 'w')
+        # f.writelines([f'Dataset {self.dataset_name}. Elapsed features computation time: {t1-t0}\n'])
+            
     def fit(self, X_train, y_train):
         
         self.X_train = X_train
@@ -126,12 +187,12 @@ class EPGS_ML():
         print('Generating segmentation ...')
         self.recording_name = recording_name
         self.recording, self.ana = read_signal(recording_name)
-        test_hop_length = self.config.hop_length // self.config.scope
-        data = generate_sliding_windows(self.recording, self.ana, 
-                                            window_size = self.config.window_size, 
+        test_hop_length = self.hop_length // self.scope
+        data = generate_sliding_windows_single(self.recording, self.ana, 
+                                            window_size = self.window_size, 
                                             hop_length = test_hop_length, 
                                             method = 'raw', 
-                                            scale = self.config.scale, 
+                                            scale = self.scale, 
                                             task = 'test')
         if self.ana is not None:
             self.input = calculate_features(data[0], method = self.config.method)
@@ -192,7 +253,27 @@ class EPGS_ML():
         else:
             raise RuntimeError("Must input either 'prediction' or 'ground_truth' ")
 
-### Some utilities function 
+### Some utilities function      ##########################
+def calculate_features(df, method):
+    d = []
+    for i in tqdm(range(len(df))):
+        feats_vector = []
+        if method == 'wavelet':
+            coef = pywt.wavedec(df[i,:],'sym4',level = 3)
+            for i in range(len(coef)):
+                feats = calculate_statistics(coef[i])
+                feats_vector += feats
+        elif method == 'fft':
+            n_fft = df[i,:].shape[0]
+            coef = (np.abs(librosa.stft(df[i, :],n_fft=n_fft,center=False))/np.sqrt(n_fft)).ravel()
+            feats_vector += calculate_statistics(coef)
+        elif method == 'raw':
+            feats_vector += calculate_statistics(df[i,:])
+        else: 
+            raise ValueError(f"Undefined method {str(method)}. Must be 'wavelet','fft' or 'raw'.")
+        d.append(feats_vector)
+    d = np.stack([f for f in d])
+    return d
 
 def to_ana(segmentation):
     # create *.ANA file
@@ -238,6 +319,46 @@ def extend(arr1, target):
         extension = np.tile(arr1[-1,:], (ext_len,1))
     return np.concatenate([arr1, extension])
 
+import numpy as np
+import pandas as pd
+
+def read_dataset_csv(dataset_name, data_path = '../dataML'):
+    columns = []
+    for i in range(4):
+        columns += [f'n5_{i}', f'n25_{i}', f'n75_{i}', f'n95_{i}', f'median_{i}', 
+                    f'mean_{i}', f'std_{i}', f'var_{i}', f'rms_{i}', f'sk_{i}', f'zcr_{i}', f'en_{i}', f'perm_en_{i}']
+    X_train = pd.read_csv(f'{data_path}/Data_{dataset_name}_train.csv',header = None)
+    X_test = pd.read_csv(f'{data_path}/Data_{dataset_name}_test.csv',header = None)
+    y_train =  pd.read_csv(f'{data_path}/Label_{dataset_name}_train.csv',header = None)
+    y_test =  pd.read_csv(f'{data_path}/Label_{dataset_name}_test.csv',header = None)
+    
+    X_train.columns = columns
+    X_test.columns = columns
+    return X_train, X_test, y_train, y_test
+
+# def read_combined_dataset_csv():
+#     X_train_combined = []
+#     X_test_combined = []
+#     y_train_combined = []
+#     y_test_combined = []
+#     for i in range(1, 6):
+#         X_train, X_test, y_train, y_test = read_dataset_csv(dataset_name = i)
+#         X_train, X_test, y_train, y_test = X_train.to_numpy(), X_test.to_numpy(), y_train.to_numpy(), y_test.to_numpy()
+#         X_train_combined.append(X_train)
+#         X_test_combined.append(X_test)
+#         y_train_combined.append(y_train)
+#         y_test_combined.append(y_test)
+#     X_train_combined = np.concatenate(X_train_combined)
+#     X_test_combined = np.concatenate(X_test_combined)
+#     y_train_combined = np.concatenate(y_train_combined)
+#     y_test_combined = np.concatenate(y_test_combined)
+#     return X_train_combined, X_test_combined, y_train_combined, y_test_combined
+
+# def read_dataset_from_config(config):
+#     if (config.dataset_name != 99) and (config.dataset_name != 'combined'):
+#         return read_dataset_csv(config.dataset_name)
+#     else: 
+#         return read_combined_dataset_csv()
 # def aggregate_to_analysis():
 #     print('Aggregating predictions...') if verbose == True else None
 

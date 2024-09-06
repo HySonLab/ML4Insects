@@ -1,23 +1,25 @@
 from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.metrics import accuracy_score
-from utils.metrics import scoring
+
+import numpy as np
+import pandas as pd
 import pywt
 from scipy.stats import skew
-from utils.stats import calculate_statistics
 
 from copy import deepcopy as dc
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
+
 import time
+import datetime
 from easydict import EasyDict
-import datetime 
 import os
 from tqdm import tqdm 
-from dataset_utils.datagenerator import generate_sliding_windows_single
-from dataset_utils.datahelper import read_signal
-from dataset_utils.dataset import EPGDataset
-from utils import visualization
+
+from .Dataset import EPGDataset
+from ..dataset_utils.datagenerator import generate_sliding_windows_single
+from ..dataset_utils.datahelper import read_signal
+from ..utils import metrics, visualization
+from ..utils.stats import calculate_statistics
 
 # ======================= MODEL ===========================
 from sklearn.ensemble import RandomForestClassifier
@@ -41,7 +43,7 @@ def get_MLmodel(name):
 XGB_params_grid = {'eta': [0.01, 0.1, 0.2, 0.3], 'n_estimators': [50,100, 200, 300],'max_depth': [3,4,5,6]}
 
 class EPGSegmentML():
-    def __init__(self, config, random_state = 28):
+    def __init__(self, config, inference = False):
 
         # Dataset
         self.data_path = config.data_path 
@@ -61,7 +63,7 @@ class EPGSegmentML():
         self.scale = config.scale 
 
         # Environment
-        self.random_state = random_state
+        self.random_state = 28
         self._is_model_trained = False
         self._is_pretrained = False
 
@@ -140,7 +142,7 @@ class EPGSegmentML():
         self.pred_proba = self.model.predict_proba(X_test)
         pred_windows = np.argmax(self.pred_proba, axis = -1)
         # Scoring
-        results = scoring(y_test, pred_windows)
+        results = metrics.scoring(y_test, pred_windows)
         scores = results['scores']
         cf = results['confusion_matrix']
         self.classification_result_['class_acc'] = [cf[i,i] for i in range(cf.shape[0])]
@@ -319,10 +321,7 @@ def extend(arr1, target):
         extension = np.tile(arr1[-1,:], (ext_len,1))
     return np.concatenate([arr1, extension])
 
-import numpy as np
-import pandas as pd
-
-def read_dataset_csv(dataset_name, data_path = '../dataML'):
+def read_dataset_csv(dataset_name, data_path):
     columns = []
     for i in range(4):
         columns += [f'n5_{i}', f'n25_{i}', f'n75_{i}', f'n95_{i}', f'median_{i}', 
@@ -335,61 +334,3 @@ def read_dataset_csv(dataset_name, data_path = '../dataML'):
     X_train.columns = columns
     X_test.columns = columns
     return X_train, X_test, y_train, y_test
-
-# def read_combined_dataset_csv():
-#     X_train_combined = []
-#     X_test_combined = []
-#     y_train_combined = []
-#     y_test_combined = []
-#     for i in range(1, 6):
-#         X_train, X_test, y_train, y_test = read_dataset_csv(dataset_name = i)
-#         X_train, X_test, y_train, y_test = X_train.to_numpy(), X_test.to_numpy(), y_train.to_numpy(), y_test.to_numpy()
-#         X_train_combined.append(X_train)
-#         X_test_combined.append(X_test)
-#         y_train_combined.append(y_train)
-#         y_test_combined.append(y_test)
-#     X_train_combined = np.concatenate(X_train_combined)
-#     X_test_combined = np.concatenate(X_test_combined)
-#     y_train_combined = np.concatenate(y_train_combined)
-#     y_test_combined = np.concatenate(y_test_combined)
-#     return X_train_combined, X_test_combined, y_train_combined, y_test_combined
-
-# def read_dataset_from_config(config):
-#     if (config.dataset_name != 99) and (config.dataset_name != 'combined'):
-#         return read_dataset_csv(config.dataset_name)
-#     else: 
-#         return read_combined_dataset_csv()
-# def aggregate_to_analysis():
-#     print('Aggregating predictions...') if verbose == True else None
-
-#     # Write results in form of analysis files
-#     n_windows = len(pred_windows)//self.config.scope
-#     time = [0] # Make time marks
-#     for i in range(n_windows):
-#         time.append((self.config.window_size+i*self.config.scope*self.hop_length)/100)
-
-#     agg_pred = [] # aggregating consecutive predictions
-#     for i in range(n_windows):
-#         cl,c = np.unique(pred_windows[i*self.config.scope:(i+1)*self.config.scope], return_counts=True)
-#         agg_label = cl[np.argmax(c)]
-#         agg_pred.append(agg_label)
-
-#     pred_windows = np.append([agg_pred[0]], agg_pred) # merge the predicted labels
-
-#     ana_label = [] # analysis file
-#     ana_time = [time[0]]
-
-#     pin = 0 # Merge intervals
-#     for i in range(n_windows):
-#         if pred_windows[i] != pred_windows[pin]:
-#             ana_label.append(pred_windows[pin])
-#             ana_time.append(time[i])
-#             pin = i
-
-#     ana_label.append(pred_windows[n_windows-1])
-
-#     ana_time.append(time[i])
-#     ana_label += [12]
-
-#     self.predicted_analysis = pd.DataFrame({'label':ana_label,'time':ana_time})
-

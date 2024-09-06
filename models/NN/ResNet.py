@@ -7,20 +7,26 @@ def compute_size(input_size, conv_layer):
     dilation = conv_layer.dilation[0]
     stride = conv_layer.stride[0]
     padding = conv_layer.padding[0]
-    new_size = int((input_size + 2*padding - dilation*(kernel_size - 1) - 1)/stride + 1)
+    new_size = int((input_size + 2*padding - dilation*(kernel_size - 1) - 1)//stride + 1)
     return new_size
 
 class ResNetBlock(nn.Module):
     def __init__(self, input_size, in_channels, filter, kernel):
         super().__init__()
         self.__type__ = 'cnn'
-        self.conv1 = nn.Conv1d(in_channels = in_channels, out_channels = filter, kernel_size = kernel, padding= 'same')
-        self.conv2 = nn.Conv1d(in_channels = filter, out_channels = filter, kernel_size = kernel, padding= 'same')
-        self.conv3 = nn.Conv1d(in_channels = filter, out_channels = filter, kernel_size = kernel, padding= 'same')
+        
+        self.conv1 = nn.Conv1d(in_channels = in_channels, out_channels = filter, kernel_size = kernel, padding= kernel//2)
+        out_size = compute_size(input_size, self.conv1)
+        self.conv2 = nn.Conv1d(in_channels = filter, out_channels = filter, kernel_size = kernel, padding= kernel//2)
+        out_size = compute_size(out_size, self.conv2)
+        self.conv3 = nn.Conv1d(in_channels = filter, out_channels = filter, kernel_size = kernel, padding= kernel//2)
+        out_size = compute_size(out_size, self.conv3)
         # self.norm = nn.BatchNorm1d(filter)
+        
         self.norm = nn.LayerNorm([filter, input_size]) #=> More stable
         self.actv = nn.ReLU()
         self.init_weights = False
+        self.out_size = out_size
     def forward(self,x):
         residual = self.conv1(x)
         x = self.actv(residual)
@@ -31,7 +37,7 @@ class ResNetBlock(nn.Module):
         return x
     
 class ResNet(nn.Module):
-    def __init__(self, n_class = 7):
+    def __init__(self, input_size, n_class = 7):
         torch.manual_seed(28)
         super().__init__()
         self.__type__ = 'cnn'
@@ -40,15 +46,17 @@ class ResNet(nn.Module):
 
         self.conv = nn.Conv1d(1, 64, 15)
         self.pool0 = nn.MaxPool1d(kernel_size = 2)
-
-        self.block1 = ResNetBlock(505, 64, 64, 5)
+        out_size = compute_size(input_size, self.conv) // 2
+        self.block1 = ResNetBlock(out_size, 64, 64, 5)
         self.pool1 = nn.MaxPool1d(kernel_size = 2)
+        out_size = out_size // 2
         self.block2 = ResNetBlock(252, 64, 128, 5)
         self.pool2 = nn.MaxPool1d(kernel_size = 2)
+        out_size = out_size // 2
         self.block3 = ResNetBlock(126, 128, 128, 5)
         self.final_pool = nn.MaxPool1d(kernel_size = 2)
-
-        self.fc = nn.Linear(128*63, n_class)
+        out_size = out_size // 2
+        self.fc = nn.Linear(128*out_size, n_class)
         self.dropout = nn.Dropout(0.3)
         self.init_weights = True
         self.init_weight()

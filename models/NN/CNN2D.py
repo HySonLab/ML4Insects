@@ -9,23 +9,25 @@ def compute_size(input_size, conv_layer):
     dilation = conv_layer.dilation[0]
     stride = conv_layer.stride[0]
     padding = conv_layer.padding[0]
-    new_size = int((input_size + 2*padding - dilation*(kernel_size - 1) - 1)/stride + 1)
+    new_size = int((input_size + 2*padding - dilation*(kernel_size - 1) - 1)//stride + 1)
     return new_size
 
 class CNN2D(nn.Module):
-    def __init__(self, n_class = 7):
+    def __init__(self, input_size, n_class = 7):
         torch.manual_seed(28)
         super().__init__()
         self.__type__ = 'cnn'
         self.__arch__ = 'cnn2d'
         self.__version__ = 'baseline'
         self.conv1 = nn.Conv2d(in_channels = 1, out_channels = 16, kernel_size = 3, stride = 1)
+        out_size = compute_size(input_size, self.conv1) // 2
         self.conv2 = nn.Conv2d(in_channels = 16, out_channels = 16, kernel_size = 3, stride = 1)
+        out_size = compute_size(out_size, self.conv1) // 2
         self.pool = nn.MaxPool2d(kernel_size=2, stride = 2)
         self.relu = nn.ReLU()
         self.dropout1 = nn.Dropout(0.3)
         self.dropout2 = nn.Dropout(0.3)
-        self.fc1 = nn.Linear(16*14*14,256)
+        self.fc1 = nn.Linear(16*out_size*out_size, 256)
         self.fc2 = nn.Linear(256, n_class)
         self.init_weights = False
 

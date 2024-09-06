@@ -7,7 +7,7 @@ def compute_size(input_size, conv_layer):
     dilation = conv_layer.dilation[0]
     stride = conv_layer.stride[0]
     padding = conv_layer.padding[0]
-    new_size = int((input_size + 2*padding - dilation*(kernel_size - 1) - 1)/stride + 1)
+    new_size = int((input_size + 2*padding - dilation*(kernel_size - 1) - 1)//stride + 1)
     return new_size
 
 class CNN1D(nn.Module):

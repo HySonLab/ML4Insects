@@ -6,15 +6,19 @@ import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt 
 
-from utils import utils, metrics, visualization
-from dataset_utils import datagenerator, dataloader, datahelper
-from dataset_utils.dataset import EPGDataset
 import time
 import datetime 
 import os 
 from tqdm import tqdm 
 
+from .Dataset import EPGDataset
+from ..utils import utils, metrics, visualization
+from ..dataset_utils import datagenerator, dataloader, datahelper
+
+
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 def get_model(config):
 
@@ -27,13 +31,16 @@ def get_model(config):
     elif config.method == 'wavelet': 
         input_size = 515
         in_channels = 4
+    if config.arch in ['mlp', 'cnn1d', 'resnet']:
+        assert config.method in ['raw', 'fft', 'wavelet'], f'Unexpected feature of type {config.method} for model of type {config.arch}'
     if config.arch == 'mlp':
         return MLP(input_size = input_size)
     elif config.arch == 'cnn1d':
-        return CNN1D(input_size = input_size, in_channels = in_channels)
+        return CNN1D(input_size = input_size)
     elif config.arch == 'resnet':
-        return ResNet(input_size = input_size, in_channels = in_channels)
+        return ResNet(input_size = input_size)
     elif config.arch == 'cnn2d':
+        assert config.method in ['gaf', 'spectrogram', 'scalogram'], f'Unexpected feature of type {config.method} for model of type {config.arch}'
         if config.method == 'gaf':
             input_size = 64
         elif config.method == 'spectrogram':
@@ -43,13 +50,17 @@ def get_model(config):
         return CNN2D(input_size = input_size)
 
 class EPGSegment:
-    def __init__(self, config, random_state = 28):
+    def __init__(self, config, inference = False):
         self.config = config
 
         # Dataset
-        self.data_path = config.data_path 
-        self.dataset_name = config.dataset_name
-        self.dataset = EPGDataset(self.data_path, self.dataset_name)
+        if inference == False:
+            print('Training mode.')
+            self.data_path = config.data_path 
+            self.dataset_name = config.dataset_name
+            self.dataset = EPGDataset(self.data_path, self.dataset_name)
+        else:
+            print('Inference mode, skip loading data.')
         
         # Model/ optimizers
         self.device = device
@@ -73,7 +84,7 @@ class EPGSegment:
         self.scale = config.scale 
 
         # Environment 
-        self.random_state = random_state
+        self.random_state = 28
         self._is_model_trained = False 
         self._is_dataloaders_available = False
 
@@ -228,14 +239,22 @@ class EPGSegment:
         if (self._is_model_trained == False):
             raise Warning('Model is not trained.')
         self.recording_name = recording_name
-        self.recording, self.ana = datahelper.read_signal(recording_name)
+        if isinstance(recording_name, str):
+            self.recording, self.ana = self.dataset.loadRec(recName = recording_name)
+            print(f'File name: {recording_name}')
+        elif isinstance(recording_name, int):
+            dat = self.dataset[recording_name]
+            self.recording, self.ana = dat['recording'], dat['ana']
+            print(f'File name: {dat["name"]}')
+        if self.ana is None:
+            print('Ground-truth annotation was not detected.')
         test_hop_length = self.window_size//self.scope
 
         self.model.eval()
         
         # Initial segmentation
         print('Preparing data...') if verbose == True else None
-        data = datagenerator.generate_sliding_windows(self.recording, self.ana, 
+        data = datagenerator.generate_sliding_windows_single(self.recording, self.ana, 
                                                         window_size = self.window_size,
                                                         hop_length = test_hop_length, 
                                                         method = self.method, 
@@ -338,7 +357,7 @@ class EPGSegment:
         except:
             self.model = torch.load(f'./checkpoints/{self.config.arch}/{path}')
         self._is_model_trained = True
-        print('Loading complete.')
+        print('Checkpoint loaded.')
   
 def to_ana(segmentation):
     # create *.ANA file

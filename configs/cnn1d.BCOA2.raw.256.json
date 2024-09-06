@@ -1,1 +1,0 @@
-{"exp_name": "BCOA2", "dataset_name": 2, "window_size": 1024, "hop_length": 1024, "arch": "cnn1d", "method": "raw", "scale": true, "outlier_filter": false, "optimizer": "Adam", "n_epochs": 100, "lr": 0.0001, "batch_size": 256, "scope": 1, "data_path": "../"}

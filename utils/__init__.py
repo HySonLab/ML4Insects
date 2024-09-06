@@ -1,2 +1,5 @@
-from . import augmentation, configs_utils, bash_utils, utils, metrics, stats, visualization  
+from .configs_utils import *
+from .utils import *
+from .stats import *
+from .visualization import *
 

@@ -2,7 +2,7 @@ Metadata-Version: 2.1
 Name: PyEPG
 Version: 0.0.1
 Summary: Open-source package for insects EPG data analysis
-Home-page: https://github.com/HySonLab/PyEPG
+Home-page: https://github.com/HySonLab/ML4Insects
 Author: DINHQuangDung1999
 Author-email: dqdung999@gmail.com
 License: MIT

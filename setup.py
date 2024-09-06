@@ -11,7 +11,7 @@ setup(
     packages= find_packages(where = "PyEPG"),
     long_description = long_description,
     long_description_content_type = 'text/markdown',
-    url = "https://github.com/HySonLab/PyEPG",
+    url = "https://github.com/HySonLab/ML4Insects",
     author = "DINHQuangDung1999",
     author_email = "dqdung999@gmail.com",
     license="MIT",

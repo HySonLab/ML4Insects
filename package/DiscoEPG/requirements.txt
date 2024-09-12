@@ -13,4 +13,5 @@ plotly-resampler
 ipywidgets==8.1.3
 nbformat==5.10.4
 pyts==0.13.0
+opencv-python==4.10.0
 tqdm

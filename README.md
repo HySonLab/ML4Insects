@@ -1,7 +1,7 @@
-# DiscoEPG (Discovery EPG) - A library for EPG signal analysis of pierce-sucking insects
-
-## Overview
-Electrical penetration graph (EPG) is a technique used to study the feeding behavior of sucking insects such as aphids. Specifically, the experimental insect and host plant are made part of an electrical circuit, which is closed when aphid mouthparts penetrate plant tissue. When the aphid stylet is inserted intercellularly, the voltage is positive and when inserted intracellularly, the voltage is negative. Waveforms in EPG have been correlated to specific aphid feeding behaviors by stylectomy followed by microscopy of the plant tissue to determine the approximate location of the stylet as well as observing aphid head movement, posture, and muscle dynamics. EPG is well established and has been widely used to study the mechanisms of plant virus transmission by aphids, the effect of resistant and susceptible lines on aphid feeding behaviors, and to better our understanding of the mechanisms that aphids use to continuously drink from the phloem.   
+# DiscoEPG (Discovery EPG) - A library for EPG signal analysis of pierce-sucking insects 🐞🍃⚡💻
+[PyPI Link](https://pypi.org/project/DiscoEPG/)
+## 🌎 Overview
+Electrical penetration graph (EPG) is a technique used to study the feeding behavior of sucking insects such as aphids. Specifically, the experimental insect and host plant are made part of an electrical circuit, which is closed when aphid mouthparts penetrate plant tissue. When the aphid stylet is inserted intercellularly, the voltage is positive and when inserted intracellularly, the voltage is negative. Waveforms in EPG have been correlated to specific aphid feeding behaviors by stylectomy followed by microscopy of the plant tissue to determine the approximate location of the stylet as well as observing aphid head movement, posture, and muscle dynamics. EPG is well established and has been widely used to study the mechanisms of plant virus transmission by aphids, the effect of resistant and susceptible lines on aphid feeding behaviors, and to better our understanding of the mechanisms that aphids use to continuously drink from the phloem. 
 
 ![ML4Insects](/figures/workflow.png "Workflow of the segmentation approach used in the package.")
 
@@ -9,7 +9,7 @@ DiscoEPG (abbreviated for Discovery-EPG) package is an open-source Python packag
 
 The novelty of DiscoEPG lies in the automatic segmentation procedure, which follows a sliding-window technique where the entire signal is broken into non-overlapping segments, then the each of them is labeled independently before concatenating the predictions to form a unified segmentation. Despite being simple, we observe great performance in terms of 1) the segment classification results and 2) the overlap rate between the prediction and the ground-truth aggregated segmentation. 
 
-## Novel features of DiscoEPG
+## 📁 Novel features of DiscoEPG
 
 ### ML for characterizing EPG waveforms
 DiscoEPG provides two trainer objects `EPGSegment` and `EPGSegmentML` which respectively support training Deep Learning (CNN1D, ResNet and CNN2D) and Traditional Machine Learning (XGB, Random Forest, Logistic Regression) for automatically detect EPG waveforms. For Deep Learning models, it is possible to save the trained model for future use, while only `XGB` from the other group provide a similar function. The prediction results can be plot to visually assess or make post-prediction refinement, as alignment errors is unavoidable. To make this step easier, `EPGSegment` allows saving the prediction result in a `*.ANA` file which can be processed by Stylet+. 
@@ -23,12 +23,14 @@ DiscoEPG allows users to create color plots,  in both _static_ and _interactive_
 DiscoEPG can calculate various EPG parameters proposed for aphids, adopted from [4].
 
 ### 
-## Example of usage
+## 📓 Example of usage
 
-## Usage 
+### Installation
 To install DiscoEPG, simply run 
 
-```pip install DiscoEPG```
+``` 
+pip install DiscoEPG
+```
 
 For DiscoEPG to run properly, you only need to prepare a dataset folder which contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Corresponding to each dataset `<dataset_name>`, there should be one subfolder called `<dataset_name>` containing the recording data (with `.A0x` extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple recording files. In case the prefix of these data files are different, DiscoEPG will automatically rename them from `<file_name>.A0x` into `<folder_name>_<file_name>.A0x`, as well as the analysis file.
 
@@ -69,12 +71,12 @@ config_file = <the_path_to_your_config_file> # Define the path to your config fi
 config = process_config(config_file)
 epgs = EPGSegment(config) # Call the trainer
 ```
-**NOTE** Please refer to the tutorial notebooks for explicit detail on how to work with DiscoEPG. 
+**NOTE.** Please refer to the tutorial notebooks for explicit detail on how to work with DiscoEPG. 
 
-## Acknowledgement
+## 💡 Acknowledgement
 We hugely thanks the authors of the cited work for providing us with necessary tools which were the building blocks for DiscoEPG. 
 
-## If you find our work helpful, please cite it with
+## ✅ If you find our work helpful, please cite it with
 
 ```bibtex
 @article {Dinh2024.06.10.598170,
@@ -91,12 +93,12 @@ We hugely thanks the authors of the cited work for providing us with necessary t
 }
 ```
 
-## Contributors
+## 🧑‍🔬 Contributors
 * Quang-Dung DINH, Institut Galilée, Universite Sorbonne Paris Nord, Villetaneuse 93430, Paris, France
 * Truong Son HY (PI), Department of Mathematics and Computer Science, Indiana State University, Terre Haute, IN 47809, United States
 * Phuong DAO (PI), Department of Agricultural Biology, Colorado State University, Fort Collins, CO 80523, United States
 
-## References
+## 📖 References
 [1.](https://onlinelibrary.wiley.com/doi/10.1111/j.1570-7458.1978.tb02836.x) _Aphids' EPG waveforms_. Tjallingii WF. Electronic Recording of Penetration Behaviour by Aphids Entomologia Experimentalis et Applicata. 1978; 24(3): 721–730.
 
 [2.](https://ieeexplore.ieee.org/document/9973221) _Package for effective EPG visualization_. J. Van Der Donckt, J. Van der Donckt, E. Deprost and S. Van Hoecke, "Plotly-Resampler: Effective Visual Analytics for Large Time Series," 2022 IEEE Visualization and Visual Analytics (VIS), Oklahoma City, OK, USA, 2022, pp. 21-25. [GitHub](https://github.com/predict-idlab/plotly-resampler) 

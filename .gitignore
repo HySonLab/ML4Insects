@@ -1,2 +1,5 @@
 data/
 dataML/
+build/
+dist/
+DiscoEPG.egg-info/

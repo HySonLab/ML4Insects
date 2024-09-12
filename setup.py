@@ -1,14 +1,14 @@
 from setuptools import find_packages, setup 
 
-with open('README.md', 'r') as f:
+with open('package/Introduction.md', 'r', encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name = 'PyEPG',
-    version = '0.0.1',
+    name = 'DiscoEPG',
+    version = '0.0.5',
     description = "Open-source package for insects EPG data analysis",
-    package_dir = {"":"PyEPG"},
-    packages= find_packages(where = "PyEPG"),
+    package_dir = {"":"package"},
+    packages= find_packages(where = "package"),
     long_description = long_description,
     long_description_content_type = 'text/markdown',
     url = "https://github.com/HySonLab/ML4Insects",

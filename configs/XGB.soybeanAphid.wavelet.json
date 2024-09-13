@@ -6,6 +6,5 @@
 "method": "wavelet", 
 "scale": true, 
 "outlier_filter": false, 
-"n_epochs": 100, 
 "scope": 1, 
-"data_path": "../data"}
+"data_path": "C:\\Dung\\EPG_project\\data"}

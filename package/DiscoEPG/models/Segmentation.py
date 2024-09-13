@@ -174,27 +174,27 @@ class EPGSegment:
                 pred_windows.extend(predicted.ravel().cpu().numpy())
                 true_label.extend(y_batch.ravel().cpu().numpy())
 
-        mean_loss = mean_loss/len(loader)
-        
-        results = metrics.scoring(true_label, pred_windows)
-        scores = results['scores']
-        c = results['confusion_matrix']
-
         if task == 'validate': 
+            mean_loss = mean_loss/len(loader)
             self.train_result_['validation_loss'].append(mean_loss)
-            self.train_result_['validation_accuracy'].append(scores['accuracy'])
-
+            accuracy = np.mean(np.array(true_label) == np.array(pred_windows))
+            self.train_result_['validation_accuracy'].append(accuracy)
+            return mean_loss, accuracy
         elif task == 'test':
+            results = metrics.scoring(true_label, pred_windows)
+            c = results['confusion_matrix']
+            scores = results['scores']
             self.train_result_['test_score'] = scores
             self.train_result_['test_confusion_matrix'] = c
-            self.train_result_['test_class_accuracy'] = [np.round(c[i,i],2) for i in range(c.shape[0])]
+            test_label = set(true_label)
+            id_to_label = {v: k for k, v in self.dataset.label_to_id.items()}
+            label_to_name = {v: k for k, v in self.dataset.name_to_label.items()}
+            self.train_result_['test_class_accuracy'] = {label_to_name[id_to_label[id]]: np.round(c[i,i]*100,2) for i,id in enumerate(test_label)}
             self.pred_windows = pred_windows
             if verbose == True:
-                print(f'Accuracy : {scores.accuracy}, Average f1: {scores.f1}') 
+                print(f'Accuracy: {scores["accuracy"]}, Average f1: {scores["f1"]}') 
                 print(f'Class accuracy: {self.train_result_["test_class_accuracy"]}')
                 print('Finished testing!')
-                
-        return mean_loss, scores['accuracy']
 
     def train(self, early_stop = True, patience = 5, min_delta = 0.01, verbose = True):
         # Initialization 
@@ -221,7 +221,7 @@ class EPGSegment:
                     if _is_early_stopped == False:   
                         print(f'Early stopping occured at epoch {epoch+1+patience} after {patience} epochs of changes less than {min_delta} in validation accuracy. Validation loss: {self.train_result_["validation_loss"][-1]:.4f}')       
                         # Test and save the checkpoint at early stopped epochs
-                        _, _ = self.evaluate(task = 'test')
+                        self.evaluate(task = 'test')
                         self.save_checkpoint(f'early_stopped_{epoch}')
                         self.train_result_['early_stopping_epoch'] = epoch   
                         _is_early_stopped = True 
@@ -240,7 +240,8 @@ class EPGSegment:
             raise Warning('Model is not trained.')
         self.recording_name = recording_name
         if isinstance(recording_name, str):
-            self.recording, self.ana = self.dataset.loadRec(recName = recording_name)
+            recData = self.dataset.loadRec(recName = recording_name)
+            self.recording, self.ana = recData['recording'], recData['ana']
             print(f'File name: {recording_name}')
         elif isinstance(recording_name, int):
             dat = self.dataset[recording_name]
@@ -289,13 +290,13 @@ class EPGSegment:
 
         # Scoring
         if self.ana is not None: 
-            self.overlap_rate = np.mean(self.true_segmentation == pred_segmentation)
+            self.overlap_rate = np.round(np.mean(self.true_segmentation == pred_segmentation)*100, 2)
             print(f'Overlap rate: {self.overlap_rate}') if verbose == True else None
 
         # map to ground_truth labels  
         self.pred_segmentation = pd.Series(pred_segmentation).map({0: 1, 1: 2, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8}).to_numpy() 
         self.pred_ana = to_ana(self.pred_segmentation) 
-
+        self.pred_ana = self.pred_ana[['label','time']]
         return self.pred_ana 
 
     #################################################
@@ -321,7 +322,7 @@ class EPGSegment:
         
     def save_checkpoint(self, name = ''):
         date = str(datetime.date.today())
-        os.makedirs(f'./checkpoints', exist_ok = True)
+        os.makedirs(f'./checkpoints/{self.model.__arch__}', exist_ok = True)
 
         if name == '':
             saved_name = f'arch-{self.model.__arch__}.version-{self.model.__version__}.window-{self.config.window_size}.'
@@ -333,8 +334,8 @@ class EPGSegment:
         torch.save(self.model, save_path)
         print(f'Parameters saved to {save_path}.')
 
-    def plot_segmentation(self, which = 'pred_vs_gt', savefig = False, name: str = ''): 
-        visualization.plot_gt_vs_pred_segmentation(self.recording, self.ana, self.pred_ana, which, savefig)
+    def plot_segmentation(self, which = 'pred_vs_gt', hour = None, range = None, savefig = False, name: str = ''): 
+        visualization.plot_gt_vs_pred_segmentation(self.recording, self.ana, self.pred_ana, hour, range, which, savefig)
                 
     def plot_interactive(self, which = 'prediction', smoothen = False):
         if which == 'prediction':
@@ -370,7 +371,7 @@ def to_ana(segmentation):
             ana_time.append(i/100)
             tmp_label = segmentation[i]
     ana_label += [segmentation[i], 99]
-    ana_time += [28800]
+    ana_time += [(len(segmentation) + 1)/100]
     pred_ana = pd.DataFrame({'time': ana_time, 'label': ana_label})
     
     return pred_ana

@@ -66,7 +66,7 @@ class EPGSegmentML():
         self.random_state = 28
         self._is_model_trained = False
         self._is_pretrained = False
-
+        self.processed_data_path = f'{self.data_path}/dataML'
         # Result
         self.classification_result_ = EasyDict({})
 
@@ -74,7 +74,8 @@ class EPGSegmentML():
         self.model = get_MLmodel(config.arch)
         self.classification_result_ = EasyDict({})
 
-    def get_traindata(self, test_size = 0.2):
+    def generate_train_data(self, test_size = 0.2):
+        print(f'Processed dataset is saved to {self.processed_data_path}')
         if os.path.exists(f'{self.data_path}/dataML/Label_{self.dataset_name}_train.csv'):
             print('Warning. Training data existed.')
             inp = input('Continue? (Y/N)')
@@ -116,12 +117,21 @@ class EPGSegmentML():
         
         # f = open(f'{self.data_path}/log/features_computation_time.txt', 'w')
         # f.writelines([f'Dataset {self.dataset_name}. Elapsed features computation time: {t1-t0}\n'])
-            
-    def fit(self, X_train, y_train):
-        
-        self.X_train = X_train
-        self.y_train = y_train
 
+    def load_train_data(self, data_path = None, X_train = None, X_test = None, y_train = None, y_test = None):
+        if (X_train is None) and (X_test is None) and (y_train is None) and (y_test is None):
+            if data_path is None:
+                data_path = self.processed_data_path
+            self.X_train, self.X_test, self.y_train, self.y_test = read_dataset_csv(self.dataset_name, data_path)   
+            print('Data loaded from', data_path) 
+        else:
+            if (X_train is not None) and (X_test is not None) and (y_train is not None) and (y_test is not None):
+                self.X_train, self.X_test, self.y_train, self.y_test = X_train, X_test, y_train, y_test
+            else:
+                raise RuntimeError('Must input all of X_train, X_test, y_train, y_test.')
+
+    def fit(self):
+        #TODO: Fix cases with testing labels miss some classes. Perhaps creating a new label map?
         print('Training...')
         t0 = time.perf_counter()
         self.model.fit(self.X_train, self.y_train)
@@ -225,7 +235,7 @@ class EPGSegmentML():
         # map to ground_truth labels  
         self.pred_segmentation = pd.Series(pred_segmentation).map({0: 1, 1: 2, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8}).to_numpy() 
         self.pred_ana = to_ana(self.pred_segmentation) 
-        
+        self.pred_ana =self.pred_ana[['label', 'time']]
         if return_score == True:
             return self.pred_ana, self.overlap_rate
         else:
@@ -244,8 +254,8 @@ class EPGSegmentML():
     def plot_pred_proba(self, r: tuple = None, ax = None):
         visualization.plot_pred_proba(self.pred_segm_proba, self.config.hop_length, self.config.scope, r, ax)
 
-    def plot_segmentation(self, which = 'pred_vs_gt', savefig = False): 
-        visualization.plot_gt_vs_pred_segmentation(self.recording, self.ana, self.pred_ana, which, savefig, name = self.recording_name)
+    def plot_segmentation(self, which = 'pred_vs_gt', hour = None, range = None, savefig = False): 
+        visualization.plot_gt_vs_pred_segmentation(self.recording, self.ana, self.pred_ana, hour = hour, range = range, which = which, savefig = savefig, name = self.recording_name)
         
     def interactive_plot(self, which = 'prediction', smoothen = False):
         if which == 'prediction':

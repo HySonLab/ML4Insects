@@ -1,0 +1,10 @@
+{"exp_name": "awdawdawd", 
+"dataset_name": "twentyfour", 
+"window_size": 1024, 
+"hop_length": 1024, 
+"arch": "XGB", 
+"method": "wavelet", 
+"scale": true, 
+"outlier_filter": false, 
+"scope": 1, 
+"data_path": "C:\\Dung\\EPG_project\\data"}

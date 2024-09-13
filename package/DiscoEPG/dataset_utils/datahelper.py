@@ -106,7 +106,8 @@ def read_signal(filename: str, data_path = '../data') -> tuple:
         ana = ana[(ana['label'] != 9) & (ana['label'] != 10) & (ana['label'] != 11)]
         ana.drop_duplicates(subset='time',inplace=True)
         ana.index = [i for i in range(len(ana))]
-    except:
+    except Exception as e:
+        print(e)
         ana = None 
     return data, ana
 

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd 
 import librosa
 import pywt 
 
@@ -23,7 +24,7 @@ def get_position_label(waveform_indices, position):
             if (start <= position) & (position <= end):
                 return wave_type
             
-def visualize_signal(recording, ana_file, sr = 100, ax = None, title = ''):
+def visualize_signal(recording, ana_file, hour = None, range = None, ax = None, title = ''):
 
     plt.rcParams.update({'font.size': 14})
     '''
@@ -34,33 +35,81 @@ def visualize_signal(recording, ana_file, sr = 100, ax = None, title = ''):
         :param sr: sampling rate. Default = 100Hz.
     Output:
         plot of the full wave (wave types) with colors
-    '''    
-    
-    time_axis = np.linspace(0, len(recording)/sr, len(recording))
 
+    NOTE: By default, sampling rate = 100
+    '''    
+    sr = 100
+    time_axis = np.linspace(0, len(recording)/sr, len(recording))
+    recording = dc(recording)
     ana = dc(ana_file)
     ana['time'] = ana['time'].apply(lambda x: x*sr)
     ana['time'] = ana['time'].astype(int)
-    waveform_indices = get_index(ana)
     
+    if hour is not None or range is not None:
+        if isinstance(hour, int): # TO MAKE HOURLY PLOT
+            assert range is None, 'Can plot either by hour or specified range.'
+            start, end = hour*360000, (hour+1)*360000
+        elif isinstance(range, list)  or isinstance(range, tuple):
+            assert hour is None, 'Can plot either by hour or specified range.'
+            assert len(range) == 2, 'Range must consider only start and end location.'
+            assert range[0] < range[1], 'Start must be smaller than end'
+            start, end = range
+            start = int(start*100)
+            end = int(end*100)
+        recording = recording[start: end]
+        # Create a new ana which fit the hours
+        tmp = ana[ana['time'] >= start]
+        tmp = tmp[tmp['time'] < end]
+        if len(tmp) == 0: # No data, match the data from the closest previous location
+            prev_row_idx = ana.index[ana['time'] >= start] - 1
+            prev_row = ana.loc[prev_row_idx]
+            start_row = dc(prev_row)
+            start_row['time'] = start
+            end_row = dc(prev_row)
+            end_row['time'] = end
+            tmp = pd.concat([start_row, end_row], axis = 0)
+        else: # PAD DATA TO GET THE FULL LENGTH
+            if tmp.iloc[0]['time'] != start: # PAD HEAD
+                prev_row_idx = tmp.index[0] - 1
+                first_row = dc(ana.loc[[prev_row_idx]])
+                first_row['time'] = start 
+                tmp = pd.concat([first_row, tmp], axis = 0)
+            if tmp.iloc[-1]['time'] != end: # PAD TAIL
+                last_row = dc(tmp.iloc[[-1]])
+                last_row.iloc[-1] = [99, end - 1]
+                tmp = pd.concat([tmp, last_row], axis = 0)
+        tmp.reset_index(inplace = True, drop = True)
+        ana = tmp
+        # print(ana)
+    waveform_indices = get_index(ana)
+
     custom_legends = []
     i = 0
     if ax == None:
         ax = plt.gca()
     for wave_type in waveform_indices.keys():
         for start, end in waveform_indices[wave_type]:
-            
-            ax.plot(time_axis[start:end+1],recording[start:end+1],color = c[wave_type])
+            if hour is not None:
+                y = recording[start - hour*360000 : end - hour*360000]
+            elif range is not None:
+                y = recording[start - range[0]*100: end - range[0]*100]
+            else:
+                y = recording[start : end]
+            x = time_axis[start:end]
+            ax.plot(x, y, color = c[wave_type])
         custom_legends.append(Line2D([0], [0], color=c[wave_type], lw=4))
         i+=1
 
-    ax.legend(custom_legends, ['NP', 'C', 'pd', 'F', 'G','E1', 'E2'],loc = 'upper right', ncols=len(custom_legends), fontsize = 15)
-    ax.set_xticks(np.arange(0,time_axis.max(),2000), labels=np.arange(0,time_axis.max(),2000), rotation = 45)
+    xlim_min = ana['time'].min()/100
+    xlim_max = ana['time'].max()/100
+    scale = (xlim_max - xlim_min)//10
+    ax.legend(custom_legends, waveform_indices.keys(), loc = 'upper right', ncols=len(custom_legends), fontsize = 15)
+    ax.set_xticks(np.arange(xlim_min, xlim_max, scale), labels=np.arange(xlim_min, xlim_max, scale), rotation = 45)
     ax.set_xlabel(f'Time (s). Sampling rate: {sr} (Hz)')
     ax.set_ylabel('Amplitude (V)')
     ax.set_title(title) if isinstance(title, str) else None
 
-def visualize_waveform(recording, ana_file, waveform = None, in_between = False, padding = 512, seed: int = 100, idx = None, sr = 100, ax = None):
+def visualize_waveform(recording, ana_file, waveform = None, in_between = False, padding = 512, seed: int = 100, idx = None, ax = None):
 
     plt.rcParams.update({'font.size': 14})
     '''
@@ -110,11 +159,48 @@ def visualize_waveform(recording, ana_file, waveform = None, in_between = False,
     return plt.gcf()
 
 ### Interactive
-def interactive_visualization(recording, ana_file, smoothen = False, sr = 100, title = ''):
-    time = np.linspace(0,len(recording)/sr,len(recording))
+def interactive_visualization(recording, ana_file, hour = None, range = None, width = 1000, height = 400, smoothen = False, title = ''):
+    sr = 100
+    time_axis = np.linspace(0, len(recording)/sr, len(recording))
+    recording = dc(recording)
     ana = dc(ana_file)
     ana['time'] = ana['time'].apply(lambda x: x*sr)
     ana['time'] = ana['time'].astype(int)
+    if hour is not None or range is not None:
+        if isinstance(hour, int): # TO MAKE HOURLY PLOT
+            assert range is None, 'Can plot either by hour or specified range.'
+            start, end = hour*360000, (hour+1)*360000
+        elif isinstance(range, list)  or isinstance(range, tuple):
+            assert hour is None, 'Can plot either by hour or specified range.'
+            assert len(range) == 2, 'Range must consider only start and end location.'
+            start, end = range
+            start = int(start*100)
+            end = int(end*100)
+        recording = recording[start: end]
+        # Create a new ana which fit the hours
+        tmp = ana[ana['time'] >= start]
+        tmp = tmp[tmp['time'] < end]
+        if len(tmp) == 0: # No data, match the data from the closest previous location
+            prev_row_idx = ana.index[ana['time'] >= start] - 1
+            prev_row = ana.loc[prev_row_idx]
+            start_row = dc(prev_row)
+            start_row['time'] = start
+            end_row = dc(prev_row)
+            end_row['time'] = end
+            tmp = pd.concat([start_row, end_row], axis = 0)
+        else: # PAD DATA TO GET THE FULL LENGTH
+            if tmp.iloc[0]['time'] != start: # PAD HEAD
+                prev_row_idx = tmp.index[0] - 1
+                first_row = dc(ana.loc[[prev_row_idx]])
+                first_row['time'] = start 
+                tmp = pd.concat([first_row, tmp], axis = 0)
+            if tmp.iloc[-1]['time'] != end: # PAD TAIL
+                last_row = dc(tmp.iloc[[-1]])
+                last_row.iloc[-1] = [99, end - 1]
+                tmp = pd.concat([tmp, last_row], axis = 0)
+        tmp.reset_index(inplace = True, drop = True)
+        ana = tmp
+        # print(ana)
     waveform_indices = get_index(ana)
 
     if smoothen == True:
@@ -122,19 +208,28 @@ def interactive_visualization(recording, ana_file, smoothen = False, sr = 100, t
     elif smoothen == False:
         fig = go.Figure()
 
-    for wave in waveform_indices.keys():
+    for wave_type in waveform_indices.keys():
         i = 0
-        for start, end in waveform_indices[wave]:
-            if i == 0:
-                fig.add_trace(go.Scatter(x = time[start:end+1], y = recording[start:end+1],line=dict(color=c[wave]), mode = 'lines',
-                                        legendgroup = wave, name = wave))   
+        for start, end in waveform_indices[wave_type]:
+            if isinstance(hour, int):
+                y = recording[start - hour*360000 : end - hour*360000]
             else:
-                fig.add_trace(go.Scatter(x = time[start:end+1], y = recording[start:end+1],line=dict(color=c[wave]),mode = 'lines',
-                                        legendgroup = wave, name = wave, showlegend = False))  
+                y = recording[start : end]
+            x = time_axis[start:end]
+            if i == 0:
+                fig.add_trace(go.Scatter(x = x, y =y,line=dict(color=c[wave_type]), mode = 'lines',
+                                        legendgroup = wave_type, name = wave_type))   
+            else:
+                fig.add_trace(go.Scatter(x = x, y = y,line=dict(color=c[wave_type]),mode = 'lines',
+                                        legendgroup = wave_type, name = wave_type, showlegend = False))  
             i+=1
     fig.update_layout(title_text= f"{title} Interactive viewer")
     fig.update_layout( xaxis=dict( rangeslider=dict(visible=True), type="linear"),  # Add range slider
                        yaxis=dict( fixedrange = False)  )
+    fig.update_layout(
+        width=width,  # Set the width (e.g., 800 pixels)
+        height=height  # Set the height (e.g., 600 pixels)
+    )
     fig.show()
 
 ######################################################
@@ -233,32 +328,34 @@ def plot_pred_proba(predicted_probability, hop_length, scope, r: tuple = None, a
 
     plt.legend(loc = 'upper right')
 
-def plot_gt_vs_pred_segmentation(recording, gt_ana, pred_ana = None, which = 'pred_vs_gt', savefig = False, name: str = ''): 
+def plot_gt_vs_pred_segmentation(recording, gt_ana, pred_ana = None, hour = None, range = None, which = 'pred_vs_gt', savefig = False, name: str = ''): 
 
     if gt_ana is None:
         which = 'prediction'
 
     if which == 'prediction':
         plt.figure(figsize=(16,3))
-        visualize_signal(recording, pred_ana)
+        visualize_signal(recording, pred_ana, hour = hour, range = range)
         plt.title('Prediction')
         plt.tight_layout()
     elif which == 'ground_truth':
         assert (gt_ana is not None), 'Ground-truth analysis not found.'
         plt.figure(figsize=(16,3))
-        visualize_signal(recording, gt_ana)
+        visualize_signal(recording, gt_ana, hour = hour, range = range)
         plt.title('Prediction')
         plt.tight_layout() 
 
     elif which == 'pred_vs_gt':
+        assert pred_ana is not None, 'Must input prediction analysis'
+
         f, ax = plt.subplots(2, 1, figsize=(16,5))
         
-        visualize_signal(recording, gt_ana, ax=ax[0])
+        visualize_signal(recording, gt_ana, ax=ax[0], hour = hour, range = range)
         ax[0].text(0.85, 0.1, 'Ground-truth', horizontalalignment='center', verticalalignment='center', transform=ax[0].transAxes)
         ax[0].set_xlabel('')
         ax[0].set_xticks([])
         ax[0].set_title(name)
-        visualize_signal(recording, pred_ana, ax = ax[1])
+        visualize_signal(recording, pred_ana, ax = ax[1], hour = hour, range = range)
         ax[1].text(0.85, 0.1, 'Predicted', horizontalalignment='center', verticalalignment='center', transform=ax[1].transAxes)
         plt.subplots_adjust(hspace = 0)
 

@@ -4,7 +4,7 @@ build/
 dist/
 prediction/
 DiscoEPG.egg-info/
-prediction/
 log/
+checkpoints/
 /*.xlsx
 debug.ipynb

@@ -26,7 +26,15 @@ DiscoEPG can calculate various EPG parameters proposed for aphids, adopted from 
 ## 📓 Example of usage
 
 ### Installation
-To install DiscoEPG, simply run 
+It is recommended to create a python environment for any Python project. 
+
+Before installing DiscoEPG, download the `requirements.txt` file and put it in your working folder, and install all the required dependencies by running
+
+``` 
+pip install -r requirements.txt
+```
+
+Then, to install DiscoEPG, simply run 
 
 ``` 
 pip install DiscoEPG

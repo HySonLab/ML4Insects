@@ -2,6 +2,7 @@ data/
 dataML/
 build/
 dist/
+prediction/
 DiscoEPG.egg-info/
 prediction/
 /*.xlsx

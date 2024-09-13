@@ -5,5 +5,6 @@ dist/
 prediction/
 DiscoEPG.egg-info/
 prediction/
+log/
 /*.xlsx
 debug.ipynb

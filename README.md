@@ -32,13 +32,12 @@ It is recommended to create a python environment for any Python project (Optiona
 conda create --name <env> --file requirements_conda.txt
 ```
 
-+ CMD: On CMD, locate to your working folder by (e.g. `C:\<working_dir>`)
++ CMD: On CMD (Windows), locate to your working folder by (e.g. `C:\<working_dir>`)
 ```
-python3 -m venv env
-.env/Scripts/activate
-
+python3 -m venv <env>
+<env>/Scripts/activate
 ```
-After that, download the `requirements.txt` file and put it in your working directory, and install all the required dependencies by running
+where `<env>` is the name of your environment. After that, download the `requirements.txt` file and put it in your working directory, and install all the required dependencies by running
 
 ``` 
 pip install -r requirements.txt

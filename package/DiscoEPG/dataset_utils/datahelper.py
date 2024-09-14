@@ -7,48 +7,6 @@ from copy import deepcopy as dc
 import torch
 from datetime import date
 
-# ============================= Dataset =============================
-datasets = {
-            'zt': ['0zt','8zt','16zt'], 
-            'ct': ['0ct','8ct','16ct'],
-            'BCOA-Wheat': ['BCOA-Wheat'],
-            'Cannabis-hemp': ['non-viruliferous-hemp', 'viruliferous-hemp'],
-            'Cannabis-potato': ['non-viruliferous-potato', 'viruliferous-potato'],
-            'ArabidopsisGPA': ['ArabidopsisGPA'],
-            'wheatrnai': ['wheatrnai'], 
-            'SBA-HostSurface': ['SBA-HostSurface'],
-            'SBA-Rag5': ['SBA-Rag5'],
-            'sorghumaphid': ['sorghumaphid'], 
-            }
-
-def get_dataset_group(group):
-    if group == 1 or group == 'BCOA1': # BCOA1
-        # return datasets['zt']
-        return datasets['zt'] + datasets['ct']
-    elif group == 2 or group == 'BCOA2': # BCOA2
-        return datasets['BCOA-Wheat']  
-    elif group == 3 or group == 'CA': # Cannabis aphid
-        return datasets['Cannabis-hemp'] + datasets['Cannabis-potato']  
-    elif group == 4 or group == 'GPA': # GPA
-        return datasets['ArabidopsisGPA']
-    elif group == 5 or group == 'SA': # Soybean
-        return datasets['SBA-Rag5']
-        # return datasets['SBA-Rag5'] + datasets['SBA-HostSurface']
-    elif group == 6 or group == 'SorgA': # Sorghum
-        return datasets['sorghumaphid']
-    elif group == 7 or group == 'RNAi': # Wheat RNAi
-        return datasets['wheatrnai']
-    elif group == 99 or group == 'combined':
-        all_names = []
-        for i in range(1,6):
-            all_names += get_dataset_group(i)
-        return all_names
-    else:
-        try:
-            return datasets[group]
-        except:
-            raise ValueError('Unsupported value.')
-
 # ============================= Label map =============================
 waveform_labels = ['NP', 'C', 'E1', 'E2', 'F', 'G', 'pd']
 ana_labels = [1, 2, 4, 5, 6, 7, 8]
@@ -70,15 +28,7 @@ import numpy as np
 import os 
 wd = os.getcwd()
 
-def get_filename(name, data_path = '../data'):
-    filenames = os.listdir(f'{data_path}/{name}_ANA')
-    unique = []
-    for name in filenames:
-        name = name[:-4]
-        unique.append(name)
-    return unique
-    
-def read_signal(filename: str, data_path = '../data') -> tuple:
+def read_signal(filename: str, data_path = '../data', dataset_name = None) -> tuple:
     '''
         Input: 
             filename: name of the recording
@@ -87,7 +37,7 @@ def read_signal(filename: str, data_path = '../data') -> tuple:
     '''
     # Read signals
     d = []
-    dataset_name = filename.split('_')[0]
+    # dataset_name = filename.split('_')[0]
     dir = os.listdir(f'{data_path}/{dataset_name}')
     rec_components = glob.glob(f'{data_path}/{dataset_name}/{filename}.*')
 
@@ -195,15 +145,3 @@ def get_index(ana):
         #         index['pd-L-II-2'] = [[start,end]]
         
     return index 
-
-def extract_sample(wave_array,ana_file,wave_type,which):
-    '''
-        Extract one waveform sample from the whole signal
-    '''
-    ana = dc(ana_file)
-    ana['time'] = ana['time'].apply(lambda x: x*100)
-    ana['time'] = ana['time'].astype(int)
-    wave_indices = get_index(ana)
-    start,end = wave_indices[wave_type][which]
-    return wave_array[start:end]
-

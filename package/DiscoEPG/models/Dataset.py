@@ -24,20 +24,40 @@ class EPGDataset:
 
         self.data_path = data_path
         self.dataset_name = dataset_name
-        self._format_recNames()
-
-        self.recNames = os.listdir(f'{self.data_path}/{self.dataset_name}')
-        self.recNames = sorted(set([x[:-4] for x in self.recNames]))
-        t = time.perf_counter()
-        self.recordings = []
-        print('Loading data ...')
-        for id, recording_name in enumerate(tqdm(self.recNames)):
-            recording, ana = read_signal(recording_name, data_path=self.data_path)
-            self.recordings.append({'id': id,
-                                    'name': recording_name,
-                                    'recording': recording,
-                                    'ana':ana    
-                                    })
+        # self._format_recNames()
+        if isinstance(self.dataset_name, str):
+            self.recNames = os.listdir(f'{self.data_path}/{self.dataset_name}')
+            print(f'{self.data_path}/{self.dataset_name}')
+            self.recNames = sorted(set([x[:-4] for x in self.recNames]))
+            t = time.perf_counter()
+            self.recordings = []
+            print('Loading data ...')
+            for id, recording_name in enumerate(tqdm(self.recNames, desc = self.dataset_name)):
+                recording, ana = read_signal(recording_name, data_path=self.data_path, dataset_name = self.dataset_name)
+                self.recordings.append({'id': id,
+                                        'name': recording_name,
+                                        'recording': recording,
+                                        'ana':ana,
+                                        'dataset': self.dataset_name,
+                                        })
+        elif isinstance(self.dataset_name, list):
+            print(f'Found {len(dataset_name)} datasets: {str(self.dataset_name)[1:-1]}.')
+            self.recNames = []
+            self.recordings = []
+            t = time.perf_counter()
+            print('Loading data ...')
+            for set_name in self.dataset_name:
+                filenames = os.listdir(f'{self.data_path}/{set_name}')
+                filenames = sorted(set([x[:-4] for x in filenames]))
+                self.recNames += list(filenames)
+                for id, recording_name in enumerate(tqdm(filenames, desc = set_name)):
+                    recording, ana = read_signal(recording_name, data_path=self.data_path, dataset_name = set_name)
+                    self.recordings.append({'id': id,
+                                            'name': recording_name,
+                                            'recording': recording,
+                                            'ana':ana,
+                                            'dataset': set_name,
+                                            })                
         print(f'Done! Elapsed: {time.perf_counter() - t} s')
 
         self.guidelines = [
@@ -71,22 +91,22 @@ class EPGDataset:
                 recs.append(self.__getitem__(idx))
             return recs
 
-    def _format_recNames(self):
-        recNames = os.listdir(f'{self.data_path}/{self.dataset_name}')
-        prefix = f'{self.dataset_name}_'
-        formated = 0
-        for name in recNames:
-            if not name.startswith(prefix):
-                formated = 1
-                newname = f'{prefix}{name}'
-                os.rename(f'{self.data_path}/{self.dataset_name}/{name}',f'{self.data_path}/{self.dataset_name}/{newname}')
-        anaNames = os.listdir(f'{self.data_path}/{self.dataset_name}_ANA')
-        for name in anaNames:
-            if not name.startswith(prefix):
-                newname = f'{prefix}{name}'
-                os.rename(f'{self.data_path}/{self.dataset_name}_ANA/{name}',f'{self.data_path}/{self.dataset_name}_ANA/{newname}')
-        if formated == 1:
-            print(f'Filenames formated with prefix {prefix}.')
+    # def _format_recNames(self):
+    #     recNames = os.listdir(f'{self.data_path}/{self.dataset_name}')
+    #     prefix = f'{self.dataset_name}_'
+    #     formated = 0
+    #     for name in recNames:
+    #         if not name.startswith(prefix):
+    #             formated = 1
+    #             newname = f'{prefix}{name}'
+    #             os.rename(f'{self.data_path}/{self.dataset_name}/{name}',f'{self.data_path}/{self.dataset_name}/{newname}')
+    #     anaNames = os.listdir(f'{self.data_path}/{self.dataset_name}_ANA')
+    #     for name in anaNames:
+    #         if not name.startswith(prefix):
+    #             newname = f'{prefix}{name}'
+    #             os.rename(f'{self.data_path}/{self.dataset_name}_ANA/{name}',f'{self.data_path}/{self.dataset_name}_ANA/{newname}')
+    #     if formated == 1:
+    #         print(f'Filenames formated with prefix {prefix}.')
             
     def plot(self, idx, mode = 'static', hour = None, range = None, width = None, height = None, smoothen = False):
         if isinstance(idx, str):

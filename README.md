@@ -26,11 +26,16 @@ DiscoEPG can calculate various EPG parameters proposed for aphids, adopted from 
 ## 📓 Example of usage
 
 ### Installation
-It is recommended to create a python environment for any Python project. 
+It is recommended to create a python environment for any Python project (Optional). First,  download the `requirements.txt` file and put it in your working directory. You can then create a new environment with install all the required dependencies by running
++ Conda:
+```
+conda create --name <env> --file requirements.txt
+```
 
-Before installing DiscoEPG, download the `requirements.txt` file and put it in your working folder, and install all the required dependencies by running
-
-``` 
++ CMD: On CMD, locate to your working folder by (e.g. `C:\<working_dir>`)
+```
+python3 -m venv env
+.env/Scripts/activate
 pip install -r requirements.txt
 ```
 
@@ -40,7 +45,7 @@ Then, to install DiscoEPG, simply run
 pip install DiscoEPG
 ```
 
-For DiscoEPG to run properly, you only need to prepare a dataset folder which contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Corresponding to each dataset `<dataset_name>`, there should be one subfolder called `<dataset_name>` containing the recording data (with `.A0x` extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple recording files. In case the prefix of these data files are different, DiscoEPG will automatically rename them from `<file_name>.A0x` into `<folder_name>_<file_name>.A0x`, as well as the analysis file.
+For DiscoEPG to run properly, you only need to prepare a dataset folder which contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Corresponding to each dataset `<dataset_name>`, there should be one subfolder called `<dataset_name>` containing the recording data (with `.A0x` extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple recording files, which will be concatenate into one complete recording. ~~In case the prefix of these data files are different, DiscoEPG will automatically rename them from `<file_name>.A0x` into `<folder_name>_<file_name>.A0x`, as well as the analysis file.~~
 
 For example 
 ```

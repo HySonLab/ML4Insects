@@ -26,20 +26,16 @@ DiscoEPG can calculate various EPG parameters proposed for aphids, adopted from 
 ## 📓 Example of usage
 
 ### Installation
-It is recommended to create a python environment for any Python project (Optional). You can create a new environment with 
+It is recommended to create a python environment for any Python project (Optional). First,  download the `requirements.txt` file and put it in your working directory. You can then create a new environment with install all the required dependencies by running
 + Conda:
 ```
 conda create --name <env> --file requirements_conda.txt
 ```
 
-+ CMD: On CMD (Windows), locate to your working folder by (e.g. `C:\<working_dir>`)
++ CMD: On CMD, locate to your working folder by (e.g. `C:\<working_dir>`)
 ```
-python3 -m venv <env>
-<env>/Scripts/activate
-```
-where `<env>` is the name of your environment. After that, download the `requirements.txt` file and put it in your working directory, and install all the required dependencies by running
-
-``` 
+python3 -m venv env
+.env/Scripts/activate
 pip install -r requirements.txt
 ```
 

@@ -27,7 +27,7 @@ class EPGDataset:
         # self._format_recNames()
         if isinstance(self.dataset_name, str):
             self.recNames = os.listdir(f'{self.data_path}/{self.dataset_name}')
-            print(f'{self.data_path}/{self.dataset_name}')
+            # print(f'{self.data_path}/{self.dataset_name}')
             self.recNames = sorted(set([x[:-4] for x in self.recNames]))
             t = time.perf_counter()
             self.recordings = []

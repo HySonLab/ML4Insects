@@ -5,6 +5,6 @@ dist/
 prediction/
 DiscoEPG.egg-info/
 log/
-checkpoints/
 /*.xlsx
 debug.ipynb
+Newmodeltraining.ipynb

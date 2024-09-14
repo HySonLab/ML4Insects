@@ -5,7 +5,7 @@ with open('package/Introduction.md', 'r', encoding="utf-8") as f:
 
 setup(
     name = 'DiscoEPG',
-    version = '0.0.9',
+    version = '0.0.10',
     description = "Open-source package for insects EPG data analysis",
     package_dir = {"":"package"},
     packages= find_packages(where = "package"),

@@ -1,16 +1,17 @@
 {
-    "exp_name": "combined_data",
-    "dataset_name": 99,
+    "exp_name": "CombinedData", 
+    "dataset_name": ["BCOA1", "BCOA2", "SoybeanAphid", "CannabisAphid", "GreenPeachAphid"], 
     "window_size": 1024, 
     "hop_length": 1024, 
-    "arch": "cnn1d",
+    "arch": "cnn1d", 
     "method": "raw", 
     "scale": true, 
     "outlier_filter": false, 
     "optimizer": "Adam", 
-    "n_epochs": 100, 
+    "n_epochs": 10, 
     "lr": 0.0001, 
     "batch_size": 256, 
-    "scope":1,
-    "data_path" : "../data"
-    }
+    "scope": 1, 
+    "data_path": "C:\\Dung\\EPG_project\\data"
+}
+

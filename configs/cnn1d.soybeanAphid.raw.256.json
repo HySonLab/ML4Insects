@@ -3,7 +3,7 @@
 "window_size": 1024, 
 "hop_length": 1024, 
 "arch": "cnn1d", 
-"method": "wavelet", 
+"method": "raw", 
 "scale": true, 
 "outlier_filter": false, 
 "optimizer": "Adam", 
@@ -11,4 +11,4 @@
 "lr": 0.0001, 
 "batch_size": 256, 
 "scope": 1, 
-"data_path": "C:\\Dung\\EPG_project\\ML4Insects\\data"}
+"data_path": "C:\\Dung\\EPG_project\\data"}

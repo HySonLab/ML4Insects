@@ -6,9 +6,10 @@ import seaborn as sns
 import os 
 wd = os.getcwd()
 
-def write_training_log(model, config, result):
-    
-    os.makedirs(f'./log/{model.__arch__}', exist_ok= True)
+def write_training_log(model, config, result, save_dir: str = ''):
+    if save_dir == '':
+        save_dir = f'{config.root_dir}/log/{model.__arch__}'
+    os.makedirs(save_dir, exist_ok= True)
     date = str(datetime.datetime.now())[:-7]
     columns = ['Date','Description', 'Version', 'Optimizer', 'Device', '#Epochs', 'Learning_rate', 'Batch_size'] \
                         + ['t_train', 't_train_epoch', 't_data'] \
@@ -16,7 +17,7 @@ def write_training_log(model, config, result):
                         
 
     # Write scoring results in a .csv file
-    session_result_path = f'./log/{model.__arch__}/session_result.csv'
+    session_result_path = f'{save_dir}/session_result.csv'
     if os.path.exists(session_result_path):
         f = pd.read_csv(session_result_path, index_col = [0])
     else:
@@ -43,7 +44,8 @@ def write_training_log(model, config, result):
     f.to_csv(session_result_path)
 
     # Write training log in a .txt file
-    with open(f'./log/{model.__arch__}/session_log.txt','a') as f:
+    log_path = f'{save_dir}/session_log.txt'
+    with open(log_path,'a') as f:
 
         f.writelines([
                     f'======================================================================================\n',
@@ -57,8 +59,11 @@ def write_training_log(model, config, result):
                     f"Flatten cf: {' '.join([str(num) for num in result['test_confusion_matrix'].flatten()])}\n",
                     ])  
 
+    print(f'Log written to {session_result_path} and {log_path}.')
 
-def plot_training_result(model, config, result, savefig = True):
+def plot_training_result(model, config, result, savefig = True, save_dir = ''):
+    if save_dir == '':
+        save_dir = f'{config.root_dir}/log/{model.__arch__}'
     plt.rcParams.update({'font.size': 12})
     # Learning curves
     train_loss = result['training_loss']
@@ -100,18 +105,8 @@ def plot_training_result(model, config, result, savefig = True):
     plt.tight_layout()
 
     if savefig == True:
-        os.makedirs(f'./log/{model.__arch__}', exist_ok= True)
-        
+        os.makedirs(save_dir, exist_ok= True)
         d = str(datetime.date.today())
-        p = os.path.join(f'./log/{model.__arch__}/{config.exp_name}_{model.__arch__}_{d}.png')
-        plt.savefig(p)      
-
-def format_filenames(folder):
-    if os.path.exists(f'./data/{folder}'):
-        dir = os.listdir(f'./data/{folder}')
-        for n in dir:
-            if not n.startswith(folder):
-                newname = folder + '_' + n
-                os.rename(f'./data/{folder}/{n}', f'./data/{folder}/{newname}')
-    else:
-        raise RuntimeError(f"Path './data/{folder}' does not exist.")
+        save_path = f'{save_dir}/{config.exp_name}_{model.__arch__}_{d}.png'
+        plt.savefig(save_path)      
+        print(f'Figure saved to {save_path}.')

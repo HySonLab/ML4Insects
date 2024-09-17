@@ -7,4 +7,5 @@
 "scale": true, 
 "outlier_filter": false, 
 "scope": 1, 
+"root_dir": "C:\\Dung\\EPG_project\\ML4Insects",
 "data_path": "C:\\Dung\\EPG_project\\data"}

@@ -6,7 +6,7 @@ from copy import deepcopy as dc
 
 import torch
 from datetime import date
-
+import warnings
 # ============================= Label map =============================
 waveform_labels = ['NP', 'C', 'E1', 'E2', 'F', 'G', 'pd']
 ana_labels = [1, 2, 4, 5, 6, 7, 8]
@@ -40,7 +40,8 @@ def read_signal(filename: str, data_path = '../data', dataset_name = None) -> tu
     # dataset_name = filename.split('_')[0]
     dir = os.listdir(f'{data_path}/{dataset_name}')
     rec_components = glob.glob(f'{data_path}/{dataset_name}/{filename}.*')
-
+    if len(rec_components) == 0:
+        raise RuntimeError(f'No recording named {filename} found at {data_path}/{dataset_name}.')
     # Read the signal (.A0x) files
     for file_path in rec_components:
         x = pd.read_csv(file_path, low_memory = False, delimiter=";", header = None, usecols=[1])
@@ -49,15 +50,19 @@ def read_signal(filename: str, data_path = '../data', dataset_name = None) -> tu
     data = data.to_numpy().squeeze(1)
 
     # Read the analysis (.ANA) files
-    try:
-        ana_path = f'{data_path}/{dataset_name}_ANA/{filename}.ANA'
+    ana_path = f'{data_path}/{dataset_name}_ANA/{filename}.ANA'
+    if os.path.exists(ana_path):    
         ana = pd.read_csv(ana_path, encoding='utf-16', delimiter = '\t',header = None, usecols=[0,1])
         ana.columns = ['label','time']
         ana = ana[(ana['label'] != 9) & (ana['label'] != 10) & (ana['label'] != 11)]
         ana.drop_duplicates(subset='time',inplace=True)
         ana.index = [i for i in range(len(ana))]
-    except Exception as e:
-        print(e)
+        if (ana['time'].iloc[-1]) != (data.shape[0]/100.):
+            len_ana = (ana['time'].iloc[-1])
+            len_data = (data.shape[0]/100.)
+            warnings.warn("Segmentation is given up to {:.2f} while the recoring's length is {:.2f}.".format(len_ana, len_data))
+    else:
+        print(f'No annotation (*.ANA) was found for recording {filename}.')
         ana = None 
     return data, ana
 

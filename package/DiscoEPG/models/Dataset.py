@@ -20,11 +20,34 @@ class EPGDataset:
                 self, 
                 data_path = '../data', 
                 dataset_name = 'SA',
+                inference = False,
                 ):
 
         self.data_path = data_path
         self.dataset_name = dataset_name
-        # self._format_recNames()
+        self.is_inference_mode = inference
+        if inference == False:
+            self.load_database()
+        else:
+            self.database_loaded = False
+            # print(self.database_loaded)
+            print('Inference mode, skip loading data.')
+
+        self.guidelines = [
+                            'The recording is always started with NP',
+                            'Np is always followed by C or last until the end',
+                            'E2 is always preceded by E1',
+                            'pd waveform is always preceded by C and followed by C or Np',
+                            'The subphase sequence after pd (pdII-1) should be II-2, II-3',
+                            'F is always preceded by C',
+                            'F is always followed by Np or C',
+                            'G is always preceded by C',
+                            'G is always followed by Np or C',
+                            'E1 is always followed by E1e, E2, C, or Np',
+                            'The end of each recording must be marked (T, code 99)',
+                            ]        
+    def load_database(self):
+        # Reading database 
         if isinstance(self.dataset_name, str):
             self.recNames = os.listdir(f'{self.data_path}/{self.dataset_name}')
             # print(f'{self.data_path}/{self.dataset_name}')
@@ -59,37 +82,47 @@ class EPGDataset:
                                             'dataset': set_name,
                                             })                
         print(f'Done! Elapsed: {time.perf_counter() - t} s')
-
-        self.guidelines = [
-                            'The recording is always started with NP',
-                            'Np is always followed by C or last until the end',
-                            'E2 is always preceded by E1',
-                            'pd waveform is always preceded by C and followed by C or Np',
-                            'The subphase sequence after pd (pdII-1) should be II-2, II-3',
-                            'F is always preceded by C',
-                            'F is always followed by Np or C',
-                            'G is always preceded by C',
-                            'G is always followed by Np or C',
-                            'E1 is always followed by E1e, E2, C, or Np',
-                            'The end of each recording must be marked (T, code 99)',
-                            ]        
+        self.database_loaded = True 
 
     def __len__(self):
         return len(self.recordings)
 
+    def inference_mode(self):
+        self.is_inference_mode = True
+
+    def training_mode(self):
+        self.is_inference_mode = False
+
     def __getitem__(self, idx):
+        assert self.database_loaded == True, "Database is not loaded. Load with EPGDataset.loadRec()."
         return self.recordings[idx]
 
-    def loadRec(self, recName):
-        if isinstance(recName, str):
-            idx = self.recNames.index(recName)
-            return self.__getitem__(idx)
-        elif isinstance(recName, list):
-            recs = []
-            for name in recName:
-                idx = self.recNames.index(name)
-                recs.append(self.__getitem__(idx))
-            return recs
+    def loadRec(self, recName, data_path = None, dataset_name = None):
+        if data_path is not None or dataset_name is not None:
+            assert self.is_inference_mode == True, 'Reading external data is only possible in inference mode. Run self.inference_mode() to switch to inference mode.'
+        if self.is_inference_mode == True:
+            if data_path == None:
+                data_path = self.data_path
+            if dataset_name == None:
+                dataset_name = self.dataset_name
+            recording, ana = read_signal(recName, data_path=data_path, dataset_name = dataset_name)
+            recording = {'id': id,
+                        'name': recName,
+                        'recording': recording,
+                        'ana':ana,
+                        'dataset': self.dataset_name,
+                        }
+            return recording
+        else:
+            if isinstance(recName, str):
+                idx = self.recNames.index(recName)
+                return self.__getitem__(idx)
+            elif isinstance(recName, list):
+                recs = []
+                for name in recName:
+                    idx = self.recNames.index(name)
+                    recs.append(self.__getitem__(idx))
+                return recs
 
     # def _format_recNames(self):
     #     recNames = os.listdir(f'{self.data_path}/{self.dataset_name}')
@@ -325,6 +358,9 @@ class EPGDataset:
                 # print(recAna)
             else:
                 recAna = ana
+            if recAna is None:
+                print(f'No annotation was found for {recName}.')
+                continue
             recTime = recAna.iloc[-1,1]//3600
             waveformIndices = get_index(recAna)
             # allWaveformIds = set(recAna.loc[:,'label'])
@@ -751,12 +787,16 @@ class EPGDataset:
 
             self.params.append(params)
             self.error_log[recName] = error_log
-        self.params = pd.concat(self.params)
+
+        if len(self.params) == 0:
+            return 
+        else:
+            self.params = pd.concat(self.params)
         
-        if export_xlsx == True:
-            with pd.ExcelWriter(f'EPGParameters_{self.dataset_name}.xlsx', engine='xlsxwriter') as writer:
-                self.params.to_excel(writer, sheet_name='Overall')
-            print(f'Exported to {os.getcwd()}/EPGParameters_{self.dataset_name}.xlsx')
+            if export_xlsx == True:
+                with pd.ExcelWriter(f'EPGParameters_{self.dataset_name}.xlsx', engine='xlsxwriter') as writer:
+                    self.params.to_excel(writer, sheet_name='Overall')
+                print(f'Exported to {os.getcwd()}/EPGParameters_{self.dataset_name}.xlsx')
 
         return self.params
         

@@ -52,16 +52,15 @@ def get_model(config):
 class EPGSegment:
     def __init__(self, config, inference = False):
         self.config = config
-
+        self.data_path = config.data_path 
+        self.root_dir = config.root_dir
+        self.is_inference_mode = inference
         # Dataset
         if inference == False:
             print('Training mode.')
-            self.data_path = config.data_path 
-            self.dataset_name = config.dataset_name
-            self.dataset = EPGDataset(self.data_path, self.dataset_name)
-        else:
-            print('Inference mode, skip loading data.')
-        
+        self.dataset_name = config.dataset_name
+        self.dataset = EPGDataset(self.data_path, self.dataset_name, inference)
+    
         # Model/ optimizers
         self.device = device
         self.model = get_model(self.config).to(self.device)        
@@ -85,7 +84,7 @@ class EPGSegment:
 
         # Environment 
         self.random_state = 28
-        self._is_model_trained = False 
+        self.model_is_trained = False 
         self._is_dataloaders_available = False
 
         # Result
@@ -99,6 +98,11 @@ class EPGSegment:
                                 'training_time' :0, 
                                 'data_processing_time':0, 
                                 'per_epoch_training_time': []}
+    def inference_mode(self):
+        self.is_inference_mode = True
+        
+    def training_mode(self):
+        self.is_inference_mode = False
 
     def get_dataloaders(self, r = [0.7, 0.2, 0.1]):
         print('Obtaining dataloders ...')
@@ -149,6 +153,7 @@ class EPGSegment:
         return training_loss, accuracy 
 
     def evaluate(self, task, verbose = True):
+        assert self.is_inference_mode == False, 'Evaluation is not possible in inference mode.'
         # For Task 1: Classifying an input segment of fixed size (default = 1024)
         self.model.eval()
         if task == 'validate':
@@ -198,6 +203,7 @@ class EPGSegment:
 
     def train(self, early_stop = True, patience = 5, min_delta = 0.01, verbose = True):
         # Initialization 
+        assert self.is_inference_mode == False, 'Training is not possible in inference mode.'
         if self._is_dataloaders_available == False:
             self.get_dataloaders()
         early_stopper = EarlyStopper(patience=patience, min_delta = min_delta) if early_stop == True else None
@@ -227,43 +233,44 @@ class EPGSegment:
                         _is_early_stopped = True 
 
         self.train_result_['training_time'] = time.perf_counter() - t0       
-        self._is_model_trained = True
+        self.model_is_trained = True
         print('Finished training!') if verbose == True else None
 
     #######################################
     ########## EPG SEGMENTATION ###########
     #######################################
 
-    def segment(self, recording_name, verbose = False):
+    def segment(self, recording_name, verbose = False, data_path = None, dataset_name = None):
         # For Task 2: Output an analysis file (segmentation)
-        if (self._is_model_trained == False):
+        if (self.model_is_trained == False):
             raise Warning('Model is not trained.')
-        self.recording_name = recording_name
+
         if isinstance(recording_name, str):
-            recData = self.dataset.loadRec(recName = recording_name)
-            self.recording, self.ana = recData['recording'], recData['ana']
+            recData = self.dataset.loadRec(recName = recording_name, data_path = data_path, dataset_name = dataset_name)
+            self.gt_recording, self.gt_ana = recData['recording'], recData['ana']
             print(f'File name: {recording_name}')
         elif isinstance(recording_name, int):
+            # assert self.dataset.database_loaded == True, "Database is not loaded. Load with EPGSegment.dataset.loadRec()."
             dat = self.dataset[recording_name]
-            self.recording, self.ana = dat['recording'], dat['ana']
+            self.gt_recording, self.gt_ana = dat['recording'], dat['ana']
             print(f'File name: {dat["name"]}')
-        if self.ana is None:
-            print('Ground-truth annotation was not detected.')
+        # if self.gt_ana is None:
+        #     print('Ground-truth annotation was not detected.')
         test_hop_length = self.window_size//self.scope
 
         self.model.eval()
         
         # Initial segmentation
         print('Preparing data...') if verbose == True else None
-        data = datagenerator.generate_sliding_windows_single(self.recording, self.ana, 
+        data = datagenerator.generate_sliding_windows_single(self.gt_recording, self.gt_ana, 
                                                         window_size = self.window_size,
                                                         hop_length = test_hop_length, 
                                                         method = self.method, 
                                                         scale = self.scale, 
                                                         task = 'test')
 
-        if self.ana is not None:
-            self.input, self.true_segmentation = data
+        if self.gt_ana is not None:
+            self.input, self.gt_segmentation = data
         else: 
             self.input = data
         # Reshape and convert to torch.tensor
@@ -286,11 +293,11 @@ class EPGSegment:
         for i in range(len(pred_windows)):
             pred_segmentation.extend([pred_windows[i]]*test_hop_length)
         pred_segmentation = np.array(pred_segmentation)
-        pred_segmentation = extend(pred_segmentation, self.true_segmentation)
+        pred_segmentation = extend_array(pred_segmentation, self.gt_recording)
 
         # Scoring
-        if self.ana is not None: 
-            self.overlap_rate = np.round(np.mean(self.true_segmentation == pred_segmentation)*100, 2)
+        if self.gt_ana is not None: 
+            self.overlap_rate = np.round(np.mean(self.gt_segmentation == pred_segmentation)*100, 2)
             print(f'Overlap rate: {self.overlap_rate}') if verbose == True else None
 
         # map to ground_truth labels  
@@ -303,62 +310,74 @@ class EPGSegment:
     ########## PLOT/SAVE RESULT UTILITIES ###########
     #################################################
 
-    def save_analysis(self, name: str = ''):
-
-        os.makedirs('./prediction/ANA', exist_ok = True)
-        dir = os.listdir('./prediction/ANA')
-        index = len(dir) + 1
+    def save_analysis(self, name: str = '', save_dir: str = ''):
+        if save_dir == '':
+            save_dir = f'{self.root_dir}/prediction/ANA'
+        os.makedirs(save_dir, exist_ok = True)
         if name == '':
-            save_name = f'./prediction/ANA/Untitled_{index}.ANA'
+            dir = os.listdir(save_dir)
+            index = len(dir) + 1
+            save_name = f'{save_dir}/Untitled_{index}.ANA'
         else:
-            save_name = f'./prediction/ANA/{name}.ANA'
-        self.pred_ana.to_csv(save_name,sep = '\t',header = None,index=None)
-        print(f'Analysis saved to {save_name}')      
-    def write_train_log(self):
-        utils.write_training_log(self.model, self.config, self.train_result_)
+            save_name = f'{save_dir}/{name}.ANA'
+        self.pred_ana.to_csv(save_name, sep = '\t',header = None,index=None)
+        print(f'Analysis saved to {save_name}.')      
+
+    def write_train_log(self, save_dir = ''):
+        assert self.is_inference_mode == False, 'In inference mode.'
+        utils.write_training_log(self.model, self.config, self.train_result_, save_dir)
                             
-    def plot_train_result(self, savefig = False):
-        utils.plot_training_result(self.model, self.config, self.train_result_, savefig)
+    def plot_train_result(self, savefig = False, save_dir = ''):
+        assert self.is_inference_mode == False, 'In inference mode.'
+        utils.plot_training_result(self.model, self.config, self.train_result_, savefig, save_dir)
         
-    def save_checkpoint(self, name = ''):
-        date = str(datetime.date.today())
-        os.makedirs(f'./checkpoints/{self.model.__arch__}', exist_ok = True)
+    def save_checkpoint(self, name: str = '', save_dir: str = ''):
+        assert self.model_is_trained == True, 'Model is not trained.'
+        if save_dir == '':
+            save_dir = f'{self.root_dir}/checkpoints/{self.model.__arch__}'
+        
+        os.makedirs(save_dir, exist_ok = True)
 
         if name == '':
+            date = str(datetime.date.today())
             saved_name = f'arch-{self.model.__arch__}.version-{self.model.__version__}.window-{self.config.window_size}.'
             saved_name += f'method-{self.config.method}.scale-{self.config.scale}.optimizer-{self.config.optimizer}.'
             saved_name += f'epochs-{self.config.n_epochs}.lr-{self.config.lr}.batchsize-{self.config.batch_size}'
-            save_path = f'./checkpoints/{self.model.__arch__}/{saved_name}.{date}.{self.config.exp_name}.json'
+            save_path = f'{save_dir}/{saved_name}.{date}.{self.config.exp_name}.json'
         else:
-            save_path = f'./checkpoints/{self.model.__arch__}/{name}'
+            save_path = f'{save_dir}/{name}'
         torch.save(self.model, save_path)
         print(f'Parameters saved to {save_path}.')
 
-    def plot_segmentation(self, which = 'pred_vs_gt', hour = None, range = None, savefig = False, name: str = ''): 
-        visualization.plot_gt_vs_pred_segmentation(self.recording, self.ana, self.pred_ana, hour, range, which, savefig)
+    def plot_segmentation(self, which = 'pred_vs_gt', hour = None, range = None, savefig = False, name: str = '', save_dir = ''): 
+        if 'gt' in which:
+            assert self.gt_ana is not None, "Ground-truth annotation does not exist. Can only plot prediction."
+        if 'pred' in which:
+            assert hasattr(self, 'pred_ana'), "Prediction have not been made."
+        visualization.plot_gt_vs_pred_segmentation(self.gt_recording, self.gt_ana, self.pred_ana, hour, range, which, name, savefig, save_dir)
                 
-    def plot_interactive(self, which = 'prediction', smoothen = False):
-        if which == 'prediction':
-            visualization.interactive_visualization(self.recording, self.pred_ana, smoothen, title = which)
-        elif which == 'ground_truth':
-           visualization.interactive_visualization(self.recording, self.ana, smoothen, title = which)
+    def plot_interactive(self, which = 'pred', smoothen = False):
+        if which == 'pred':
+            visualization.interactive_visualization(self.gt_recording, self.pred_ana, smoothen, title = which)
+        elif which == 'gt':
+           visualization.interactive_visualization(self.gt_recording, self.gt_ana, smoothen, title = which)
         else:
-            raise ValueError("Param which must be either 'prediction' or 'ground_truth'.")
+            raise ValueError("Param 'which' must be either 'pred' or 'gt'.")
 
     def reset(self):
-        self._is_model_trained = False 
+        self.model_is_trained = False 
         self.train_result_ = {'training_loss': [], 'training_accuracy': [], 'validation_loss': [], 'validation_accuracy': [], 
                        'test_class_accuracy': [], 'test_score': [], 'test_confusion_matrix': [],
                        'training_time' :0, 'data_processing_time':0, 'per_epoch_training_time': []}
         self.model = get_model(self.config).to(self.device)       
 
-    def load_checkpoint(self, path):
-        try:
-            self.model = torch.load(f'./checkpoints/{path}')
-        except:
-            self.model = torch.load(f'./checkpoints/{self.config.arch}/{path}')
-        self._is_model_trained = True
-        print('Checkpoint loaded.')
+    def load_checkpoint(self, name: str = '', save_dir: str = ''):
+        if save_dir == '':
+            save_dir = f'{self.root_dir}/checkpoints'
+            # print(f'Using default checkpoint folder located at {save_dir}.')
+        self.model = torch.load(f'{save_dir}/{name}')
+        self.model_is_trained = True
+        print(f"Checkpoint loaded from {save_dir}/{name}.")
   
 def to_ana(segmentation):
     # create *.ANA file
@@ -387,7 +406,7 @@ def repeat(array, coef):
         repeated.extend([array[i]] * coef)
     return np.array(repeated)
 
-def extend(arr1, target):
+def extend_array(arr1, target):
     '''
         Repeat the last axis of arr1 until 
         as long as target array (or reach target length)

@@ -45,6 +45,8 @@ def visualize_signal(recording, ana_file, hour = None, range = None, ax = None, 
     ana['time'] = ana['time'].apply(lambda x: x*sr)
     ana['time'] = ana['time'].astype(int)
     
+    assert isinstance(hour, int) or hour is None, "Param 'hour' must be int."
+    assert isinstance(range, list) or isinstance(range, tuple) or range is None, "Param 'range' must be a list or tuple of length 2."
     if hour is not None or range is not None:
         if isinstance(hour, int): # TO MAKE HOURLY PLOT
             assert range is None, 'Can plot either by hour or specified range.'
@@ -328,17 +330,18 @@ def plot_pred_proba(predicted_probability, hop_length, scope, r: tuple = None, a
 
     plt.legend(loc = 'upper right')
 
-def plot_gt_vs_pred_segmentation(recording, gt_ana, pred_ana = None, hour = None, range = None, which = 'pred_vs_gt', savefig = False, name: str = ''): 
-
+def plot_gt_vs_pred_segmentation(recording, gt_ana, pred_ana = None, hour = None, range = None, which = 'pred_vs_gt', name: str = '', savefig = False, save_dir = ''): 
+    if save_dir == '':
+        save_dir = './prediction/figures'
     if gt_ana is None:
-        which = 'prediction'
+        which = 'pred'
 
-    if which == 'prediction':
+    if which == 'pred':
         plt.figure(figsize=(16,3))
         visualize_signal(recording, pred_ana, hour = hour, range = range)
         plt.title('Prediction')
         plt.tight_layout()
-    elif which == 'ground_truth':
+    elif which == 'gt':
         assert (gt_ana is not None), 'Ground-truth analysis not found.'
         plt.figure(figsize=(16,3))
         visualize_signal(recording, gt_ana, hour = hour, range = range)
@@ -361,17 +364,19 @@ def plot_gt_vs_pred_segmentation(recording, gt_ana, pred_ana = None, hour = None
 
         plt.tight_layout()
     else:
-        raise ValueError("Param which must be one of ['prediction', 'ground_truth', 'pred_vs_gt'].")
+        raise ValueError("Param which must be one of ['pred', 'gt', 'pred_vs_gt'].")
 
     if savefig == True:
-        os.makedirs('./prediction/figures', exist_ok = True)
-        dir = os.listdir('./prediction/figures')
-        index = len(dir) + 1
+        os.makedirs(save_dir, exist_ok = True)
         if name == '':
-            plt.savefig(f'./prediction/figures/Untitled{index}.png')
+            dir = os.listdir(save_dir)
+            index = len(dir) + 1
+            save_path = f'{save_dir}/Untitled{index}.png'
+            plt.savefig(save_path)
         else:
-            plt.savefig(f'./prediction/figures/{name}.png')
-
+            save_path = f'{save_dir}/{name}.png'
+            plt.savefig(save_path)
+        print(f'Figure saved to {save_path}.')
 
 #############
 ### Miscs ###

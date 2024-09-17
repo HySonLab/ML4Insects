@@ -3,12 +3,16 @@ from setuptools import find_packages, setup
 with open('package/Introduction.md', 'r', encoding="utf-8") as f:
     long_description = f.read()
 
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
+
 setup(
     name = 'DiscoEPG',
-    version = '0.0.10',
+    version = '0.0.15',
     description = "Open-source package for insects EPG data analysis",
     package_dir = {"":"package"},
     packages= find_packages(where = "package"),
+    install_requires=required,
     long_description = long_description,
     long_description_content_type = 'text/markdown',
     url = "https://github.com/HySonLab/ML4Insects",

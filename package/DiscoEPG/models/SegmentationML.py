@@ -48,7 +48,9 @@ class EPGSegmentML():
         # Dataset
         self.data_path = config.data_path 
         self.dataset_name = config.dataset_name
-        self.dataset = EPGDataset(self.data_path, self.dataset_name)
+        self.dataset = EPGDataset(self.data_path, self.dataset_name, inference)
+        self.root_dir = config.root_dir
+        self.is_inference_mode = inference 
 
         # Model/ optimizers
         self.config = config
@@ -64,19 +66,29 @@ class EPGSegmentML():
 
         # Environment
         self.random_state = 28
-        self._is_model_trained = False
+        self.model_is_trained = False
         self._is_pretrained = False
         self.processed_data_path = f'{self.data_path}/dataML'
         # Result
         self.classification_result_ = EasyDict({})
 
+    def inference_mode(self):
+        self.is_inference_mode = True
+        self.dataset.inference_mode()
+
+    def training_mode(self):
+        self.is_inference_mode = False
+        self.dataset.inference_mode()
+
     def reset(self):
         self.model = get_MLmodel(config.arch)
         self.classification_result_ = EasyDict({})
 
-    def generate_train_data(self, test_size = 0.2):
-        print(f'Processed dataset is saved to {self.processed_data_path}')
-        if os.path.exists(f'{self.data_path}/dataML/Label_{self.dataset_name}_train.csv'):
+    def generate_train_data(self, test_size = 0.2, save_path = ''):
+        assert self.is_inference_mode == False, 'Currently in inference mode. Switch to training mode first.'
+        if save_path == '':
+            save_path = f'{self.data_path}/dataML'
+        if os.path.exists(f'{save_path}/Label_{self.dataset_name}_train.csv'):
             print('Warning. Training data existed.')
             inp = input('Continue? (Y/N)')
             if inp == 'Y':
@@ -117,8 +129,10 @@ class EPGSegmentML():
         
         # f = open(f'{self.data_path}/log/features_computation_time.txt', 'w')
         # f.writelines([f'Dataset {self.dataset_name}. Elapsed features computation time: {t1-t0}\n'])
+        print(f'Processed dataset is saved to {self.processed_data_path}')
 
     def load_train_data(self, data_path = None, X_train = None, X_test = None, y_train = None, y_test = None):
+        assert self.is_inference_mode == False, 'Currently in inference mode. Switch to training mode first.'
         if (X_train is None) and (X_test is None) and (y_train is None) and (y_test is None):
             if data_path is None:
                 data_path = self.processed_data_path
@@ -131,6 +145,7 @@ class EPGSegmentML():
                 raise RuntimeError('Must input all of X_train, X_test, y_train, y_test.')
 
     def fit(self):
+        assert self.is_inference_mode == False, 'Currently in inference mode. Switch to training mode first.'
         #TODO: Fix cases with testing labels miss some classes. Perhaps creating a new label map?
         print('Training...')
         t0 = time.perf_counter()
@@ -140,11 +155,11 @@ class EPGSegmentML():
         self.classification_result_['training_time'] = training_time
         print(f'Finished training. Elapsed time: {training_time} (s)')
 
-        self._is_model_trained = True 
+        self.model_is_trained = True 
 
     def predict(self, X_test, y_test):
-
-        if self._is_model_trained == False:
+        assert self.is_inference_mode == False, 'Currently in inference mode. Switch to training mode first.'
+        if self.model_is_trained == False:
             raise Warning('Model is not trained.')
 
         # Prediction
@@ -176,39 +191,54 @@ class EPGSegmentML():
             self.model = best_estimator 
         self.cv_summary = summary
 
-    def write_cv_log(self):
-
+    def write_cv_log(self, save_dir = ''):
+        if save_dir == '':
+            save_dir = f'{self.root_dir}/log/{self.config.arch}'
         date = str(datetime.datetime.now())[:-7]
-        os.makedirs(f'log/{self.config.arch}', exist_ok = True)
-        with open(f'log/{self.config.arch}/cv_results.txt','a') as f:
+        os.makedirs(f'{save_dir}', exist_ok = True)
+        with open(f'{save_dir}/cv_results.txt','a') as f:
             f.writelines([f'Date: {date} | Model: {self.config.arch} | Dataset: {self.config.dataset_name}\n'])
             cv_summary_txt = [f'{key}: {self.cv_summary[key][0]} +- {self.cv_summary[key][1]}\n' for key in self.cv_summary.keys()]
             f.writelines(cv_summary_txt)
+        print(f'Log written to {save_dir}/cv_results.txt.')
 
-    def write_test_result(self):
+    def write_test_result(self, save_dir = ''):
+        if save_dir == '':
+            save_dir = f'{self.root_dir}/log/{self.config.arch}'
         date = str(datetime.datetime.now())[:-7]
         os.makedirs(f'log/{self.config.arch}', exist_ok = True)        
-        with open(f'log/{self.config.arch}/test_results.txt','a') as f:
+        with open(f'{save_dir}/test_results.txt','a') as f:
             f.writelines([f'Date: {date} | Model: {self.config.arch} | Dataset: {self.config.dataset_name}\n'])
             f.writelines([f"{s}: {self.classification_result_['test_scores'][s]} \n" for s in self.classification_result_['test_scores'].keys()])  
             f.writelines(f'Class accuracy: {self.classification_result_["class_acc"]}\n')  
+        print(f'Test results written to {save_dir}/test_results.txt.')
 
-    def segment(self, recording_name, is_FS = False, return_score = True):
+    def segment(self, recording_name: str, is_FS = False, data_path = None, dataset_name = None):
 
         # Prepare data
         print('Generating segmentation ...')
-        self.recording_name = recording_name
-        self.recording, self.ana = read_signal(recording_name)
+        if (self.model_is_trained == False):
+            raise Warning('Model is not trained.')
+
+        if isinstance(recording_name, str):
+            recData = self.dataset.loadRec(recName = recording_name, data_path = data_path, dataset_name = dataset_name)
+            self.gt_recording, self.gt_ana = recData['recording'], recData['ana']
+            print(f'File name: {recording_name}')
+        elif isinstance(recording_name, int):
+            dat = self.dataset[recording_name]
+            self.gt_recording, self.gt_ana = dat['recording'], dat['ana']
+            print(f'File name: {dat["name"]}')
+
         test_hop_length = self.hop_length // self.scope
-        data = generate_sliding_windows_single(self.recording, self.ana, 
+        data = generate_sliding_windows_single(self.gt_recording, self.gt_ana, 
                                             window_size = self.window_size, 
                                             hop_length = test_hop_length, 
                                             method = 'raw', 
                                             scale = self.scale, 
                                             task = 'test')
-        if self.ana is not None:
+        if self.gt_ana is not None:
             self.input = calculate_features(data[0], method = self.config.method)
-            self.true_segmentation = data[1]
+            self.gt_segmentation = data[1]
         else:
             self.input = calculate_features(input, method = self.config.method)
         selected_features = [5,6,9,10,11,12,17,18,22,23,24,25,30,31,35,36,37,38,43,44,48,49,50,51]
@@ -225,45 +255,50 @@ class EPGSegmentML():
         for i in range(len(pred_windows)):
             pred_segmentation.extend([pred_windows[i]]*test_hop_length)
         pred_segmentation = np.array(pred_segmentation)
-        pred_segmentation = extend(pred_segmentation, self.true_segmentation)
+        pred_segmentation = extend(pred_segmentation, self.gt_recording)
 
-        # Calculate overlapping rate
-        accuracy = accuracy_score(self.true_segmentation, pred_segmentation) 
-        self.overlap_rate = accuracy
-        print(f"Overlapping rate: {accuracy}")
+        # Scoring
+        if self.gt_ana is not None: 
+            self.overlap_rate = np.round(np.mean(self.gt_segmentation == pred_segmentation)*100, 2)
+            print(f'Overlap rate: {self.overlap_rate}')
 
         # map to ground_truth labels  
         self.pred_segmentation = pd.Series(pred_segmentation).map({0: 1, 1: 2, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8}).to_numpy() 
         self.pred_ana = to_ana(self.pred_segmentation) 
-        self.pred_ana =self.pred_ana[['label', 'time']]
-        if return_score == True:
-            return self.pred_ana, self.overlap_rate
-        else:
-            return self.pred_ana
+        self.pred_ana = self.pred_ana[['label','time']]
+        return self.pred_ana 
 
-    def save_analysis(self, name: str = ''):
+    def save_analysis(self, name: str = '', save_dir: str = ''):
 
-        os.makedirs('./prediction/ANA', exist_ok = True)
-        dir = os.listdir('./prediction/ANA')
-        index = len(dir) + 1
+        if save_dir == '':
+            save_dir = f'{self.root_dir}/prediction/ANA'
+        os.makedirs(save_dir, exist_ok = True)
         if name == '':
-            self.pred_ana.to_csv(f'./prediction/ANA/{self.recording_name}.ANA',sep = '\t',header = None,index=None)
+            dir = os.listdir(save_dir)
+            index = len(dir) + 1
+            save_name = f'{save_dir}/Untitled_{index}.ANA'
         else:
-            self.pred_ana.to_csv(f'./prediction/ANA/{name}.ANA',sep = '\t',header = None,index=None)
+            save_name = f'{save_dir}/{name}.ANA'
+        self.pred_ana.to_csv(save_name, sep = '\t',header = None,index=None)
+        print(f'Analysis saved to {save_name}.')      
 
     def plot_pred_proba(self, r: tuple = None, ax = None):
         visualization.plot_pred_proba(self.pred_segm_proba, self.config.hop_length, self.config.scope, r, ax)
 
-    def plot_segmentation(self, which = 'pred_vs_gt', hour = None, range = None, savefig = False): 
-        visualization.plot_gt_vs_pred_segmentation(self.recording, self.ana, self.pred_ana, hour = hour, range = range, which = which, savefig = savefig, name = self.recording_name)
-        
-    def interactive_plot(self, which = 'prediction', smoothen = False):
-        if which == 'prediction':
-            visualization.interactive_visualization(self.wave_array, self.predicted_analysis, smoothen, title = which)
-        elif which == 'ground_truth':
-           visualization.interactive_visualization(self.wave_array, self.ana, smoothen, title = which)
+    def plot_segmentation(self, which = 'pred_vs_gt', hour = None, range = None, savefig = False, name: str = '', save_dir = ''): 
+        if 'gt' in which:
+            assert self.gt_ana is not None, "Ground-truth annotation does not exist. Can only plot prediction."
+        if 'pred' in which:
+            assert hasattr(self, 'pred_ana'), "Prediction have not been made."
+        visualization.plot_gt_vs_pred_segmentation(self.gt_recording, self.gt_ana, self.pred_ana, hour, range, which, name, savefig, save_dir)
+                
+    def plot_interactive(self, which = 'pred', smoothen = False):
+        if which == 'pred':
+            visualization.interactive_visualization(self.gt_recording, self.pred_ana, smoothen, title = which)
+        elif which == 'gt':
+           visualization.interactive_visualization(self.gt_recording, self.gt_ana, smoothen, title = which)
         else:
-            raise RuntimeError("Must input either 'prediction' or 'ground_truth' ")
+            raise ValueError("Param 'which' must be either 'pred' or 'gt'.")
 
 ### Some utilities function      ##########################
 def calculate_features(df, method):

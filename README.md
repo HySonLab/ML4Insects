@@ -45,7 +45,7 @@ Then, to install DiscoEPG, simply run
 pip install DiscoEPG
 ```
 
-For DiscoEPG to run properly, you only need to prepare a dataset folder which contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Corresponding to each dataset `<dataset_name>`, there should be one subfolder called `<dataset_name>` containing the recording data (with `.A0x` extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple recording files, which will be concatenate into one complete recording. ~~In case the prefix of these data files are different, DiscoEPG will automatically rename them from `<file_name>.A0x` into `<folder_name>_<file_name>.A0x`, as well as the analysis file.~~
+For DiscoEPG to run properly, you only need to prepare a dataset folder which contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Corresponding to each dataset `<dataset_name>`, there should be one subfolder called `<dataset_name>` containing the recording data (with ~~`.A0x`~~ `.D0x`extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple recording files, which will be concatenate into one complete recording. ~~In case the prefix of these data files are different, DiscoEPG will automatically rename them from `<file_name>.A0x` into `<folder_name>_<file_name>.A0x`, as well as the analysis file.~~
 
 For example 
 ```

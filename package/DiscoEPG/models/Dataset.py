@@ -64,7 +64,7 @@ class EPGDataset:
                                         'dataset': self.dataset_name,
                                         })
         elif isinstance(self.dataset_name, list):
-            print(f'Found {len(dataset_name)} datasets: {str(self.dataset_name)[1:-1]}.')
+            print(f'Found {len(self.dataset_name)} datasets: {str(self.dataset_name)[1:-1]}.')
             self.recNames = []
             self.recordings = []
             t = time.perf_counter()

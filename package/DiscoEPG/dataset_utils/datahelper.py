@@ -44,15 +44,25 @@ def read_signal(filename: str, data_path = '../data', dataset_name = None) -> tu
         raise RuntimeError(f'No recording named {filename} found at {data_path}/{dataset_name}.')
     # Read the signal (.A0x) files
     for file_path in rec_components:
-        x = pd.read_csv(file_path, low_memory = False, delimiter=";", header = None, usecols=[1])
+        # try: # Reading in binary format (*.D0x)
+        fid = open(file_path, 'rb')
+        fid.readline();  fid.readline();  fid.readline();
+        x = pd.DataFrame(np.fromfile(fid, dtype=np.float32), columns=[1])
+        fid.close()
+
+        # except: # Reading in ASCII format (*.A0x)
+        #     x = pd.read_csv(file_path, low_memory = False, delimiter=";", header = None, usecols=[1])
         d.append(x)
     data = pd.concat(d)
     data = data.to_numpy().squeeze(1)
 
     # Read the analysis (.ANA) files
     ana_path = f'{data_path}/{dataset_name}_ANA/{filename}.ANA'
-    if os.path.exists(ana_path):    
-        ana = pd.read_csv(ana_path, encoding='utf-16', delimiter = '\t',header = None, usecols=[0,1])
+    if os.path.exists(ana_path):
+        try:
+            ana = pd.read_csv(ana_path, encoding='utf-16', delimiter = '\t',header = None, usecols=[0,1])
+        except:
+            ana = pd.read_csv(ana_path, delimiter = '\t',header = None, usecols=[0,1])
         ana.columns = ['label','time']
         ana = ana[(ana['label'] != 9) & (ana['label'] != 10) & (ana['label'] != 11)]
         ana.drop_duplicates(subset='time',inplace=True)

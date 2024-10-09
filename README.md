@@ -57,7 +57,7 @@ working directory
 ```
 
 ### For loading EPG data and doing EPG parameters calculation
-```
+```python
 from DiscoEPG import EPGDataset
 root_dir = <your_working_directory>
 dataset = EPGDataset(data_path = root_dir, dataset_name = <a_dataset_name>)

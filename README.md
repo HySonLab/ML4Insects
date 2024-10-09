@@ -64,7 +64,7 @@ dataset = EPGDataset(data_path = root_dir, dataset_name = <a_dataset_name>)
 ```
 
 ### For training/making inference with ML models
-```
+```python
 from DiscoEPG import EPGSegment # Importing trainer objects
 from DiscoEPG.utils import process_config
 config_file = <the_path_to_your_config_file> # Define the path to your config file

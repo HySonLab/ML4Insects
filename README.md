@@ -59,7 +59,7 @@ working directory
 ### For loading EPG data and doing EPG parameters calculation
 ```python
 from DiscoEPG import EPGDataset
-root_dir = <your_working_directory>
+root_dir = '<your_working_directory>'
 dataset = EPGDataset(data_path = root_dir, dataset_name = <a_dataset_name>)
 ```
 
@@ -67,7 +67,7 @@ dataset = EPGDataset(data_path = root_dir, dataset_name = <a_dataset_name>)
 ```python
 from DiscoEPG import EPGSegment # Importing trainer objects
 from DiscoEPG.utils import process_config
-config_file = <the_path_to_your_config_file> # Define the path to your config file
+config_file = '<the_path_to_your_config_file>' # Define the path to your config file
 config = process_config(config_file)
 epgs = EPGSegment(config) # Call the trainer
 ```

@@ -1,4 +1,6 @@
 # DiscoEPG (Discovery EPG) - A library for EPG signal analysis of pierce-sucking insects 🐞🍃⚡💻
+![ML4Insects](/figures/disco-concepts.png)
+\
 [PyPI Link](https://pypi.org/project/DiscoEPG/)
 ## 🌎 Overview
 Electrical penetration graph (EPG) is a technique used to study the feeding behavior of sucking insects such as aphids. Specifically, the experimental insect and host plant are made part of an electrical circuit, which is closed when aphid mouthparts penetrate plant tissue. When the aphid stylet is inserted intercellularly, the voltage is positive and when inserted intracellularly, the voltage is negative. Waveforms in EPG have been correlated to specific aphid feeding behaviors by stylectomy followed by microscopy of the plant tissue to determine the approximate location of the stylet as well as observing aphid head movement, posture, and muscle dynamics. EPG is well established and has been widely used to study the mechanisms of plant virus transmission by aphids, the effect of resistant and susceptible lines on aphid feeding behaviors, and to better our understanding of the mechanisms that aphids use to continuously drink from the phloem. 
@@ -26,26 +28,13 @@ DiscoEPG can calculate various EPG parameters proposed for aphids, adopted from 
 ## 📓 Example of usage
 
 ### Installation
-It is recommended to create a python environment for any Python project (Optional). First,  download the `requirements.txt` file and put it in your working directory. You can then create a new environment with install all the required dependencies by running
-+ Conda:
-```
-conda create --name <env> --file requirements.txt
-```
-
-+ CMD: On CMD, locate to your working folder by (e.g. `C:\<working_dir>`)
-```
-python3 -m venv env
-.env/Scripts/activate
-pip install -r requirements.txt
-```
-
-Then, to install DiscoEPG, simply run 
+To install DiscoEPG, simply run 
 
 ``` 
 pip install DiscoEPG
 ```
 
-For DiscoEPG to run properly, you only need to prepare a dataset folder which contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Corresponding to each dataset `<dataset_name>`, there should be one subfolder called `<dataset_name>` containing the recording data (with `.A0x` extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple recording files, which will be concatenate into one complete recording. ~~In case the prefix of these data files are different, DiscoEPG will automatically rename them from `<file_name>.A0x` into `<folder_name>_<file_name>.A0x`, as well as the analysis file.~~
+For DiscoEPG to run properly, you only need to prepare a dataset folder which contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Corresponding to each dataset named `<dataset_name>`, there should be one subfolder called `<dataset_name>` containing the recording data (with `.D0x`extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple recording files, which will be concatenate into one complete recording. 
 
 For example 
 ```
@@ -70,14 +59,14 @@ working directory
 ```
 
 ### For loading EPG data and doing EPG parameters calculation
-```
+```python
 from DiscoEPG import EPGDataset
 root_dir = <your_working_directory>
 dataset = EPGDataset(data_path = root_dir, dataset_name = <a_dataset_name>)
 ```
 
 ### For training/making inference with ML models
-```
+```python
 from DiscoEPG import EPGSegment # Importing trainer objects
 from DiscoEPG.utils import process_config
 config_file = <the_path_to_your_config_file> # Define the path to your config file

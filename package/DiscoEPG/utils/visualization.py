@@ -24,7 +24,7 @@ def get_position_label(waveform_indices, position):
             if (start <= position) & (position <= end):
                 return wave_type
             
-def visualize_signal(recording, ana_file, hour = None, range = None, ax = None, title = ''):
+def visualize_signal(recording, ana_file, hour = None, range = None, ax = None, title = '', timeunit = 'sec', nticks = 10):
 
     plt.rcParams.update({'font.size': 14})
     '''
@@ -101,13 +101,21 @@ def visualize_signal(recording, ana_file, hour = None, range = None, ax = None, 
             ax.plot(x, y, color = c[wave_type])
         custom_legends.append(Line2D([0], [0], color=c[wave_type], lw=4))
         i+=1
-
-    xlim_min = ana['time'].min()/100
-    xlim_max = ana['time'].max()/100
-    scale = (xlim_max - xlim_min)//10
+    
+    xlim_min = ana['time'].min()//100
+    xlim_max = ana['time'].max()//100
+    scale = (xlim_max - xlim_min)//nticks
+    xlim = np.arange(xlim_min, xlim_max+1, scale)
     ax.legend(custom_legends, waveform_indices.keys(), loc = 'upper right', ncols=len(custom_legends), fontsize = 15)
-    ax.set_xticks(np.arange(xlim_min, xlim_max, scale), labels=np.arange(xlim_min, xlim_max, scale), rotation = 45)
-    ax.set_xlabel(f'Time (s). Sampling rate: {sr} (Hz)')
+    if timeunit == 'sec':
+        xlabels = np.arange(xlim_min, xlim_max+1, scale)
+    if timeunit == 'min':
+        xlabels = np.arange(xlim_min, xlim_max+1, scale)/60
+    elif timeunit == 'hour':
+        xlabels = np.arange(xlim_min, xlim_max+1, scale)/3600
+    # print(xlabels)
+    ax.set_xticks(xlim, labels=xlabels, rotation = 45)
+    ax.set_xlabel(f'Time ({timeunit}). Sampling rate: {sr} (Hz)')
     ax.set_ylabel('Amplitude (V)')
     ax.set_title(title) if isinstance(title, str) else None
 

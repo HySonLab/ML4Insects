@@ -1,4 +1,4 @@
-# DiscoEPG (Discover EPG) - A library for EPG signal analysis of pierce-sucking insects 🐞🍃⚡💻
+# DiscoEPG (Discover EPG) - A library for EPG signal analysis of piercing-sucking insects 🐞🍃⚡💻
 ![ML4Insects](/figures/disco-concepts.png)
 \
 [PyPI Link](https://pypi.org/project/DiscoEPG/)

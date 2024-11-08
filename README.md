@@ -1,4 +1,4 @@
-# DiscoEPG (Discovery EPG) - A library for EPG signal analysis of pierce-sucking insects 🐞🍃⚡💻
+# DiscoEPG (Discover EPG) - A library for EPG signal analysis of pierce-sucking insects 🐞🍃⚡💻
 ![ML4Insects](/figures/disco-concepts.png)
 \
 [PyPI Link](https://pypi.org/project/DiscoEPG/)
@@ -34,18 +34,18 @@ To install DiscoEPG, simply run
 pip install DiscoEPG
 ```
 
-For DiscoEPG to run properly, you only need to prepare a dataset folder which contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Corresponding to each dataset named `<dataset_name>`, there should be one subfolder called `<dataset_name>` containing the recording data (with `.D0x`extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple recording files, which will be concatenate into one complete recording. 
+For DiscoEPG to run properly, you only need to prepare a dataset folder which contains the recordings with the .D0x format and the annotation files with the .ANA format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Corresponding to each dataset folder named `<dataset_name>`, there should be one subfolder called `<dataset_name>` containing the recording data (with `.D0x`extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple recording files, which will be concatenate into one complete recording. 
 
 For example 
 ```
 working directory
 ├── data
 │   ├── dataset
-|   |   └── dataset.name0.A01
-|   |   └── dataset.name1.A01
+|   |   └── dataset.name0.D01
+|   |   └── dataset.name1.D01
 |   |   └── ...
-|   |   └── dataset.name0.A08
-|   |   └── dataset.name1.A08
+|   |   └── dataset.name0.D08
+|   |   └── dataset.name1.D08
 |   ├── dataset_ANA
 |   |   └── dataset.name0_ANA
 |   |   └── dataset.name1_ANA

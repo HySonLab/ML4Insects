@@ -118,7 +118,7 @@ def visualize_signal(recording, ana_file, hour = None, range = None, ax = None, 
     ax.set_xlabel(f'Time ({timeunit}). Sampling rate: {sr} (Hz)')
     ax.set_ylabel('Amplitude (V)')
     ax.set_title(title) if isinstance(title, str) else None
-
+    ax.grid('on')
 def visualize_waveform(recording, ana_file, waveform = None, in_between = False, padding = 512, seed: int = 100, idx = None, ax = None):
 
     plt.rcParams.update({'font.size': 14})

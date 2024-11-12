@@ -67,9 +67,9 @@ class EPGDataset:
                                         })
                 # Check if time marks is correctly given
                 if ana.iloc[0,1] != 0:
-                    print(f'Warning. {recording_name} - Analysis starts at {ana.iloc[0,1]} instead of 0. Check again.')
+                    print(f'{recording_name} - Analysis starts at {ana.iloc[0,1]} instead of 0.')
                 if ana.iloc[-1,1] != len(recording)//100:
-                    print(f'Warning. {recording_name} - Analysis ends at {ana.iloc[-1,1]} instead of 0. Check again.')
+                    print(f'{recording_name} - Analysis ends at {ana.iloc[-1,1]} instead of {len(recording)/100}.')
             
                                                         
         elif isinstance(self.dataset_name, list):
@@ -92,20 +92,21 @@ class EPGDataset:
                                             'dataset': set_name,
                                             })        
                     # Check if time marks is correctly given
-                    if ana.iloc[0,1] != 0:
-                        print(f'Warning. {recording_name} - Analysis starts at {ana.iloc[0,1]} instead of 0. Check again.')
-                    if ana.iloc[-1,1] != len(recording)//100:
-                        print(f'Warning. {recording_name} - Analysis ends at {ana.iloc[-1,1]} instead of 0. Check again.')
-                
-                                        
-        print(f'Done! Elapsed: {time.perf_counter() - t} s')
+                    if ana is not None:
+                        if ana.iloc[0,1] != 0:
+                            print(f'{recording_name} - Analysis starts at {ana.iloc[0,1]} instead of 0.')
+                        if ana.iloc[-1,1] != len(recording)//100:
+                            print(f'{recording_name} - Analysis ends at {ana.iloc[-1,1]} instead of {len(recording)/100}.')
+                    
+                                            
+        print('Done! Elapsed: {:.2f} s'.format(time.perf_counter() - t))
         self.database_loaded = True 
         self.guideline_check_log = pd.DataFrame(self.guideline_check_log)
         self.guideline_check_log.index = self.guidelines
         self.guideline_check_log = self.guideline_check_log.transpose()
         with pd.ExcelWriter(f'Guideline_check.xlsx', engine='xlsxwriter') as writer:
-            self.guideline_check_log.to_excel(writer, sheet_name = 'Guideline')
-        print(f'Checking guidelines completed. View log at {os.getcwd()}/Guideline_check.csv')
+            self.guideline_check_log.to_excel(writer, sheet_name = 'Guidelines')
+        print(f'View guidelines checking log at {os.getcwd()}/Guideline_check.xlsx')
         
     def __len__(self):
         return len(self.recordings)
@@ -160,6 +161,9 @@ class EPGDataset:
         elif isinstance(idx, int):
             recData = self.recordings[idx]
         recording, ana = recData['recording'], recData['ana']
+        if ana is None:
+            print(f'No plot. No annotation (*.ANA) was found for {recData["name"]}.')
+            return
         plt.figure(figsize = (18,3))
         if mode == 'static':
             if timeunit is None:
@@ -229,13 +233,16 @@ class EPGDataset:
         return self.windows, self.labels 
 
     def check_guidelines(self, ana):
-
+        if ana is None:
+            check_text = ['No ANA.']*len(self.guidelines)
+            check_log = ['No ANA.']*len(self.guidelines)
+            return check_text, check_log
         # 1. The recording is always started with NP
         check = [False]*len(self.guidelines)
         check_log = ['']*len(self.guidelines)
         if ana.iloc[0,0] == 1:
             check[0] = True
-            check_log[0] = 'Checked'
+            check_log[0] = 'True.'
         else:
             check_log[0] = 'Recording does not start with NP'
         # 2. Np is always followed by C or last until the end
@@ -245,7 +252,7 @@ class EPGDataset:
         next_notC_idx = next_label.index[~(next_label.isin([2,12,99]))]
         if len(next_notC_idx) == 0:
             check[1] = True 
-            check_log[1] = 'Checked'
+            check_log[1] = 'True.'
         else:
             check_log[1] = f'At line {str(list(next_notC_idx-1))[1:-1]}, NP is not followed by C.'
         
@@ -256,7 +263,7 @@ class EPGDataset:
         prev_notE1_idx = prev_label.index[prev_label != 4]
         if len(prev_notE1_idx) == 0:
             check[2] = True 
-            check_log[2] = 'Checked'
+            check_log[2] = 'True.'
         else:
             check_log[2] = f'At line {str(list(prev_notE1_idx+1))[1:-1]}, E2 is not preceeded by E1.'
         
@@ -265,75 +272,81 @@ class EPGDataset:
         not_prev_by_C = []
         not_follw_by_C_or_NP = []
         for idx in pd_idx:
-            if ana.loc[idx-1,'label'] != 2:
+            if idx == 0:
+                not_prev_by_C.append(idx)
+            elif ana.loc[idx-1,'label'] != 2:
                 not_prev_by_C.append(idx)
             else:
                 if ana.loc[idx+1, 'label'] != 2 and ana.loc[idx+1, 'label'] != 1:
                     not_follw_by_C_or_NP.append(idx)
         invalid_idx = not_prev_by_C + not_follw_by_C_or_NP
         if len(invalid_idx) != 0:
-            check_log[3] = f'At line {str(list(not_prev_by_C))[1:-1]}, pd is not preceeded by C.' +\
-                            f'At line {str(list(not_follw_by_C_or_NP))[1:-1]}, pd is not followed by C or NP.'
+            check_log[3] = f'At line {str(not_prev_by_C)[1:-1]}, pd is not preceeded by C.' +\
+                            f'At line {str(not_follw_by_C_or_NP)[1:-1]}, pd is not followed by C or NP.'
         else:
             check[3] = True
-            check_log[3] = 'Checked.'
+            check_log[3] = 'True.'
         # 5. The subphase sequence after pd (pdII-1) should be II-2, II-3
         allWaveformIds = ana['label'].unique()
         if 9 not in allWaveformIds or 10 not in allWaveformIds:
             check[4] = True 
-            check_log[4] = 'Checked. pd-II-2, pd-II-3 is not presented.'
+            check_log[4] = 'True. pd-II-2, pd-II-3 is not presented.'
         # 6. F is always preceded by C and 7. F is always followed by Np or C
         F_idx = ana.index[ana['label'] == 6]
         if len(F_idx) > 0:
             not_prev_by_C = []
             not_follw_by_C_or_NP = []
             for idx in F_idx:
-                if ana.loc[idx-1,'label'] != 2:
+                if idx == 0:
+                    not_prev_by_C.append(idx)
+                elif ana.loc[idx-1,'label'] != 2:
                     not_prev_by_C.append(idx)
                 else:
                     if ana.loc[idx+1, 'label'] != 2 and ana.loc[idx+1, 'label'] != 1:
                         not_follw_by_C_or_NP.append(idx)
             if len(not_prev_by_C) != 0: # 6. F is always preceded by C
-                check_log[5] = f'At line {str(list(not_prev_by_C))[1:-1]}, F is not preceeded by C.'
+                check_log[5] = f'At line {str(not_prev_by_C)[1:-1]}, F is not preceeded by C.'
             else:
                 check[5] = True
-                check_log[5] = 'Checked.'
+                check_log[5] = 'True.'
             if len(not_follw_by_C_or_NP) != 0: #7. F is always followed by Np or C
-                check_log[6] = f'At line {str(list(not_follw_by_C_or_NP))[1:-1]}, F is not followed by C or NP.'
+                check_log[6] = f'At line {str(not_follw_by_C_or_NP)[1:-1]}, F is not followed by C or NP.'
             else:
                 check[6] = True
-                check_log[6] = 'Checked.'
+                check_log[6] = 'True.'
         else:
             check[5] = True
-            check_log[5] = 'Checked. F is not presented.'
+            check_log[5] = 'True. F is not presented.'
             check[6] = True    
-            check_log[6] = 'Checked. F is not presented.'
+            check_log[6] = 'True. F is not presented.'
         # 8. F is always preceded by C and 9. F is always followed by Np or C
         G_idx = ana.index[ana['label'] == 6]
         if len(G_idx) > 0:
             not_prev_by_C = []
             not_follw_by_C_or_NP = []
             for idx in G_idx:
-                if ana.loc[idx-1,'label'] != 2:
+                if idx == 0:
+                    not_prev_by_C.append(idx)
+                elif ana.loc[idx-1,'label'] != 2:
                     not_prev_by_C.append(idx)
                 else:
                     if ana.loc[idx+1, 'label'] != 2 and ana.loc[idx+1, 'label'] != 1:
                         not_follw_by_C_or_NP.append(idx)
             if len(not_prev_by_C) != 0: # 8. G is always preceded by C
-                check_log[7] = f'At line {str(list(not_prev_by_C))[1:-1]}, G is not preceeded by C.'
+                check_log[7] = f'At line {str(not_prev_by_C)[1:-1]}, G is not preceeded by C.'
             else:
                 check[7] = True
-                check_log[7] = 'Checked.'
+                check_log[7] = 'True.'
             if len(not_follw_by_C_or_NP) != 0: #9. G is always followed by Np or C
-                check_log[8] = f'At line {str(list(not_follw_by_C_or_NP))[1:-1]}, G is not followed by C or NP.'
+                check_log[8] = f'At line {str(not_follw_by_C_or_NP)[1:-1]}, G is not followed by C or NP.'
             else:
                 check[8] = True
-                check_log[8] = 'Checked.'
+                check_log[8] = 'True.'
         else:
             check[7] = True
-            check_log[7] = 'Checked. G is not presented.'
+            check_log[7] = 'True. G is not presented.'
             check[8] = True  
-            check_log[8] = 'Checked. G is not presented.'
+            check_log[8] = 'True. G is not presented.'
         # 10. E1 is always followed by E1e, E2, C, or Np
         E1_idx = ana.index[ana['label'] == 4]
         next_idx = E1_idx - 1
@@ -341,7 +354,7 @@ class EPGDataset:
         next_notE1eE2CNP_idx = next_label.index[~(next_label.isin([3, 5, 2, 1]))]
         if len(next_notE1eE2CNP_idx) == 0:
             check[9] = True 
-            check_log[9] = 'Checked.'
+            check_log[9] = 'True.'
         else:
             check_log[9] = f'At line {str(list(next_notE1eE2CNP_idx+1))[1:-1]}, E1 is not followed by E1e, E2, C, or Np.'
                 
@@ -349,7 +362,7 @@ class EPGDataset:
         last_row = ana.iloc[-1,:]
         if last_row['label'] == 12 or last_row['label'] == 99:
             check[10] = True
-            check_log[10] = 'Checked.'
+            check_log[10] = 'True.'
         else:
             check_log[10] = 'The recording does not end with label 99 or 12.'
         
@@ -371,7 +384,7 @@ class EPGDataset:
             if isinstance(idx, int):
                 idx = [idx]
         sheet_names = []
-        self.params = []
+        recordingParams = []
         self.error_log = {}
 
         for recIndex in idx:
@@ -392,7 +405,6 @@ class EPGDataset:
                 continue
             recTime = len(recRecording)//360000
             waveformIndices = get_index(recAna)
-            # allWaveformIds = set(recAna.loc[:,'label'])
             listWaveforms = list(waveformIndices.keys())
             error_log = []
             params = {}
@@ -438,7 +450,7 @@ class EPGDataset:
                 params['n_C']     = len(C_durations)
                 params['a_C']    = float(np.mean(C_durations).astype(np.float32))
                 params['m_C']  = float(np.median(C_durations).astype(np.float32))
-                params['%C_in_Pr']  = params['s_C'] / params['s_Pr']
+                params['%probtimeinC']  = params['s_C'] / params['s_Pr']
 
                 # Time from start of the experiment to 1st probe
                 params['t>1stPr'] = waveformIndices['C'][0][0]
@@ -446,10 +458,10 @@ class EPGDataset:
                 # Duration of 1st probe, Duration of 2nd probe
                 params['d_1stPr'] = probe_locations[0][1] - probe_locations[0][0]
                 if len(probe_locations) <= 1:
-                    params['t_2ndPr'] = 0    
+                    params['d_2ndPr'] = 0    
                     error_log.append(f'Duration of 2nd probes = 0 as number of probes = {len(probe_locations)}')
                 else:    
-                    params['t_2ndPr'] = probe_locations[1][1] - probe_locations[1][0]
+                    params['d_2ndPr'] = probe_locations[1][1] - probe_locations[1][0]
 
                 # Number of short probes (<3 min)
                 shortprobe_locations = [x for x in probe_locations if x[1] - x[0] < 180 and x[1] - x[0] > 0]
@@ -467,7 +479,7 @@ class EPGDataset:
                     params['m_pd'] = 0 
                     params['t>1stpd']  = 0 
 
-                    params['t_start1stPr>1stpd'] = 0 
+                    params['t>1stpd/1stPr'] = 0 
                 else:
                     pd_durations        = [x[1] - x[0] for x in waveformIndices['pd']]
                     params['s_pd']  = float(np.sum(pd_durations).astype(np.float32))
@@ -477,7 +489,7 @@ class EPGDataset:
                     params['m_pd'] = float(np.median(pd_durations).astype(np.float32))
                     params['t>1stpd']  = waveformIndices['pd'][0][0]
 
-                    params['t_start1stPr>1stpd'] = waveformIndices['pd'][0][0] - probe_locations[0][0]
+                    params['t>1stpd/1stPr'] = waveformIndices['pd'][0][0] - probe_locations[0][0]
                             
                 ############ F #############
                 # Total duration of F, Total duration of F during the 1st, 2nd, ..., 8th h, 
@@ -487,7 +499,7 @@ class EPGDataset:
                     params['a_F']    = 0 
                     params['n_F']     = 0 
                     params['m_F']  = 0 
-                    params['%F_in_Pr']  = 0 
+                    params['%probtimeinF']  = 0 
 
                 else:
                     F_durations         = [x[1] - x[0] for x in waveformIndices['F']]
@@ -495,7 +507,7 @@ class EPGDataset:
                     params['n_F']     = len(F_durations)
                     params['a_F']    = float(np.mean(F_durations).astype(np.float32))
                     params['m_F']  = float(np.median(F_durations).astype(np.float32))
-                    params['%F_in_Pr']  = params['s_F'] / params['s_Pr']
+                    params['%probtimeinF']  = params['s_F'] / params['s_Pr']
 
                 ################# G ################# 
                 # Total duration of G, Number of G, Mean duration of G
@@ -504,7 +516,7 @@ class EPGDataset:
                     params['a_G']    = 0 
                     params['n_G']     = 0 
                     params['m_G']  = 0 
-                    params['%G_in_Pr']  = 0 
+                    params['%probtimeinG']  = 0 
                     # for i in range(1, int(recTime) + 1):
                     #     params[f'n_G_h{i}'] = 0 
                     #     params[f's_G_h{i}'] = 0 
@@ -514,7 +526,7 @@ class EPGDataset:
                     params['n_G']     = len(G_durations)
                     params['a_G']    = float(np.mean(G_durations).astype(np.float32))
                     params['m_G']  = float(np.median(G_durations).astype(np.float32))
-                    params['%G_in_Pr']  = params['s_G'] / params['s_Pr']
+                    params['%probtimeinG']  = params['s_G'] / params['s_Pr']
                 ################# E, E1, E2 ################# 
 
                 # Total duration of E1e, Number of E1e, Mean duration of E1
@@ -540,7 +552,7 @@ class EPGDataset:
                     params['n_E1']    = 0 
                     params['m_E1'] = 0 
                     params['mx_E1']    = 0 
-                    params['%E1_in_Pr'] = 0 
+                    params['%probtimeinE1'] = 0 
                     # Single E1
                     params['s_sgE1']   = 0 
                     params['n_sgE1']     = 0 
@@ -553,24 +565,17 @@ class EPGDataset:
                     params['a_frE1']    = 0 
                     params['m_frE1']  = 0 
                     params['mx_frE1']     = 0    
-                    # E12 
-                    params['s_E12']   = 0 
-                    params['n_E12']     = 0 
-                    params['a_E12']    = 0 
-                    params['m_E12']  = 0 
-                    params['mx_E12']     = 0        
-                    params['t_1stPr>1stE12'] = 0  # Time from 1st probe to 1st E12        
-                    # Probe/NP to first E1
+                    # Number of probes/NP before first E1
                     params['n_Pr>1stE1']          = 0 
                     params['n_brPr>1stE1']    = 0 
                     params['n_Pr.after.1stE1']       = 0 
                     params['n_brPr.after.1stE1'] = 0 
                     params['s_NP>1stE1']                = 0 
 
-                    params['t_1stPr>1stE1'] = 0  # Time from 1st probe to 1st E
+                    params['t>1stE'] = 0  # Time from 1st probe to 1st E
                 
                     phloem_durations = []
-                    params['d_1stE'] = 0 
+                    params['d_1st_E'] = 0 
 
                 else:
                     # E1
@@ -580,7 +585,7 @@ class EPGDataset:
                     params['a_E1']   = float(np.mean(E1_durations).astype(np.float32))
                     params['m_E1'] = float(np.median(E1_durations).astype(np.float32))
                     params['mx_E1']    = float(np.max(E1_durations).astype(np.float32))
-                    params['%E1_in_Pr'] = params['s_E1'] / params['s_Pr']
+                    params['%probtimeinE1'] = params['s_E1'] / params['s_Pr']
                     
                     # Single E1
                     tmp = recAna[recAna['label'] == 4]
@@ -617,40 +622,6 @@ class EPGDataset:
                         params['a_frE1']    = float(np.mean(frE1_durations).astype(np.float32))
                         params['m_frE1']  = float(np.median(frE1_durations).astype(np.float32))
                         params['mx_frE1']     = float(np.max(frE1_durations).astype(np.float32))      
-                        
-                    # E12: phases with both E1 and E2
-                    E12_locations = get_stage(recAna, stage = 'E12')
-                    E12_durations = [x[1] - x[0] for x in E12_locations]
-                    # print(E12_locations)
-                    if len(E12_durations) == 0:
-                        params['s_E12']   = 0 
-                        params['n_E12']     = 0 
-                        params['a_E12']    = 0 
-                        params['m_E12']  = 0 
-                        params['mx_E12']     = 0        
-                        params['t_1stPr>1stE12'] = 0  # Time from 1st probe to 1st E12        
-                    else:
-                        params['s_E12']   = float(np.sum(E12_durations).astype(np.float32))
-                        params['n_E12']     = len(E12_durations)
-                        params['a_E12']    = float(np.mean(E12_durations).astype(np.float32))
-                        params['m_E12']  = float(np.median(E12_durations).astype(np.float32))
-                        params['mx_E12']     = float(np.max(E12_durations).astype(np.float32))
-                        params['t_1stPr>1stE12'] = E12_locations[0][0] - probe_locations[0][1]
-                    # E1 followed by E2
-                    E1followedE2_locations = get_stage(recAna, stage = 'E1followedE2')
-                    E1followedE2_durations = [x[1] - x[0] for x in E1followedE2_locations]
-                    if len(E1followedE2_durations) == 0:
-                        params['d_E1follwedbyE2']   = 0             
-                    else:
-                        params['d_E1follwedbyE2']   = float(np.mean(E1followedE2_durations).astype(np.float32))
-
-                    # E1 followed by sustained E2
-                    E1followedsE2_locations = get_stage(recAna, stage = 'E1followedsE2')
-                    E1followedsE2_durations = [x[1] - x[0] for x in E1followedsE2_locations]
-                    if len(E1followedsE2_durations) == 0:
-                        params['d_E1follwedbysE2']   = 0             
-                    else:
-                        params['d_E1follwedbysE2']   = float(np.mean(E1followedsE2_durations).astype(np.float32))
 
                     firstE1                                 = waveformIndices['E1'][0]
                     probes2firstE1                          = [probe for probe in probe_locations if probe[1] < firstE1[0]]
@@ -658,15 +629,15 @@ class EPGDataset:
                     NP2firstE                               = [NPdur for NPdur in waveformIndices['NP'] if NPdur[1] < firstE1[0]]
                     params['s_NP>1stE1']                = float(np.sum(NP2firstE).astype(np.float32))
 
-                    briefprobes2firstE1                     = [probe for probe in shortprobe_locations if probe[1] < firstE1[0]]
-                    params['n_brPr>1stE1']    = len(briefprobes2firstE1)
+                    shortprobes2firstE1                     = [probe for probe in shortprobe_locations if probe[1] < firstE1[0]]
+                    params['n_brPr>1stE1']    = len(shortprobes2firstE1)
 
                     probesafterfirstE1                      = [probe for probe in shortprobe_locations if probe[0] > firstE1[1]]
                     params['n_Pr.after.1stE1']       = len(probesafterfirstE1)
 
-                    briefprobesafterfirstE1                 = [probe for probe in probe_locations if probe[0] > firstE1[1] \
+                    shortprobesafterfirstE1                 = [probe for probe in probe_locations if probe[0] > firstE1[1] \
                                                                 and probe[1] - probe[0] < 180.]
-                    params['n_brPr.after.1stE1'] = len(briefprobesafterfirstE1)
+                    params['n_brPr.after.1stE1'] = len(shortprobesafterfirstE1)
                     
                     phloem_locations = get_stage(recAna, stage = 'phloem')
                     phloem_durations = [x[1] - x[0] for x in phloem_locations]
@@ -692,9 +663,9 @@ class EPGDataset:
                         #print('frE1_ratio ' + str(e))
 
                     if 'C' in listWaveforms:
-                        params['t_1stPr>1stE1'] = waveformIndices['E1'][0][0] - probe_locations[0][1]   
+                        params['t>1stE'] = waveformIndices['E1'][0][0] - probe_locations[0][0]   
                     
-                    params['t_Pr>1stE/1stPr'] = 0
+                    params['tPr>1stE/1stPr'] = 0
                     # s_probe_before_1stprobe_with_E = []
                     for prob_loc in probe_locations:
                         subAna = recAna[(recAna['time'] >= prob_loc[0]) & (recAna['time'] <= prob_loc[1])]
@@ -704,10 +675,10 @@ class EPGDataset:
                         # else:
                             # s_probe_before_1stprobe_with_E.append(float(subAna.loc[E_loc[0], 'time']) - prob_loc[0])
                         if len(E_loc) > 0:
-                            params['t_Pr>1stE/1stPr'] = float(subAna.loc[E_loc[0], 'time']) - prob_loc[0]
+                            params['tPr>1stE/1stPr'] = float(subAna.loc[E_loc[0], 'time']) - prob_loc[0]
                             break                
                     firstphloem = phloem_locations[0]
-                    params['d_1stE'] = firstphloem[1] - firstphloem[0]
+                    params['d_1st_E'] = firstphloem[1] - firstphloem[0]
 
                 # Total duration of E2, Number of E2, Mean duration of E2
                 if 'E2' not in listWaveforms: 
@@ -716,22 +687,31 @@ class EPGDataset:
                     params['n_E2']    = 0 
                     params['m_E2'] = 0 
                     params['mx_E2']    = 0 
-                    params['d_1stE2']  = 0 
+                    params['t>1stE2'] = 0 # Time from the 1st probe to 1st E2
+                    params['d_1st_E2']  = 0 
                     params['a_E2_per_phloem']    = 0 
-                    params['%E2_in_Pr'] = 0 
+                    params['%probtimeinE2'] = 0 
 
                     params['s_sE2']  = 0 
                     params['n_sE2']    = 0 
                     params['a_sE2']   = 0 
                     params['m_sE2'] = 0 
-                    params['t_1stPr>1stsE2'] = 0 # Time from the 1st probe to 1st E2
+                    params['t>1stsE2'] = 0 # Time from the 1st probe to 1st E2
+                    
 
-
+                    # E12 
+                    params['s_E12']   = 0 
+                    params['n_E12']     = 0 
+                    params['a_E12']    = 0 
+                    params['m_E12']  = 0 
+                    params['mx_E12']     = 0        
+                    params['t>1stE12'] = 0  # Time from 1st probe to 1st E12    
+                    
                     params['n_Pr>1stE2']     = 0
                     params['n_Pr>1stsE2']     = 0 
                     params['n_E2>1stsE2'] = 0 
-                    params['n_Pr_after_1stsE2']   = 0 
-                    params['%E2s_in_E2']   = 0 
+                    params['n_Pr.after.1stsE2']   = 0 
+                    # params['%E2s_in_E2']   = 0 
                 else:
                     E2_durations        = [x[1] - x[0] for x in waveformIndices['E2']]
                     params['s_E2']  = float(np.sum(E2_durations).astype(np.float32))
@@ -739,8 +719,8 @@ class EPGDataset:
                     params['a_E2']   = float(np.mean(E2_durations).astype(np.float32))
                     params['m_E2'] = float(np.median(E2_durations).astype(np.float32))
                     params['mx_E2']    = float(np.max(E2_durations).astype(np.float32))
-                    params['d_1stE2']   = E2_durations[0]
-                    params['%E2_in_Pr'] = params['s_E2'] / params['s_Pr']
+                    params['d_1st_E2']   = E2_durations[0]
+                    params['%probtimeinE2'] = params['s_E2'] / params['s_Pr']
 
                     sustainedE2_locations         = [x for x in waveformIndices['E2'] if x[1] - x[0] > 600.]
                     sustainedE2_durations = [x[1] - x[0] for x in sustainedE2_locations]
@@ -748,7 +728,42 @@ class EPGDataset:
                     params['n_sE2']    = len(sustainedE2_durations)
                     params['a_sE2']   = float(np.mean(sustainedE2_durations).astype(np.float32))
                     params['m_sE2'] = float(np.median(sustainedE2_durations).astype(np.float32))
-                    params['t_1stPr>1stsE2'] = sustainedE2_locations[0][0] - probe_locations[0][1]
+                    params['t>1stsE2'] = sustainedE2_locations[0][0] - probe_locations[0][1]
+
+                        
+                    # E12: phases with both E1 and E2
+                    E12_locations = get_stage(recAna, stage = 'E12')
+                    E12_durations = [x[1] - x[0] for x in E12_locations]
+                    # print(E12_locations)
+                    if len(E12_durations) == 0:
+                        params['s_E12']   = 0 
+                        params['n_E12']     = 0 
+                        params['a_E12']    = 0 
+                        params['m_E12']  = 0 
+                        params['mx_E12']     = 0        
+                        params['t>1stE12'] = 0  # Time from 1st probe to 1st E12        
+                    else:
+                        params['s_E12']   = float(np.sum(E12_durations).astype(np.float32))
+                        params['n_E12']     = len(E12_durations)
+                        params['a_E12']    = float(np.mean(E12_durations).astype(np.float32))
+                        params['m_E12']  = float(np.median(E12_durations).astype(np.float32))
+                        params['mx_E12']     = float(np.max(E12_durations).astype(np.float32))
+                        params['t>1stE12'] = E12_locations[0][0] - probe_locations[0][0]
+                    # E1 followed by E2
+                    E1followedE2_locations = get_stage(recAna, stage = 'E1followedE2')
+                    E1followedE2_durations = [x[1] - x[0] for x in E1followedE2_locations]
+                    if len(E1followedE2_durations) == 0:
+                        params['d_E1follwedbyE2']   = 0             
+                    else:
+                        params['d_E1follwedbyE2']   = float(np.mean(E1followedE2_durations).astype(np.float32))
+
+                    # E1 followed by sustained E2
+                    E1followedsE2_locations = get_stage(recAna, stage = 'E1followedsE2')
+                    E1followedsE2_durations = [x[1] - x[0] for x in E1followedsE2_locations]
+                    if len(E1followedsE2_durations) == 0:
+                        params['d_E1follwedbysE2']   = 0             
+                    else:
+                        params['d_E1follwedbysE2']   = float(np.mean(E1followedsE2_durations).astype(np.float32))
 
                     firstE2                             = waveformIndices['E2'][0]
                     probes2firstE2                      = [probe for probe in probe_locations if probe[1] < firstE2[0]]
@@ -769,43 +784,43 @@ class EPGDataset:
                     else:
                         params['a_E2_per_phloem'] = params['s_E2']/len(phloem_locations)
 
-                    params['%E2s_in_E2']   = params['n_sE2'] / params['n_E2']
+                    # params['%E2s_in_E2']   = params['n_sE2'] / params['n_E2']
                     try:
-                        params['E2_ratio']     = params['s_E2'] / params['n_E12']
+                        params['%_sE2']     = params['s_E2'] / params['n_E12']
                     except Exception as e:
-                        params['E2_ratio']     = 0 
-                        error_log.append('E2_ratio ' + str(e))
+                        params['%_sE2']     = 0 
+                        error_log.append('%_sE2 ' + str(e))
                         #print('E2_ratio ' + str(e))
 
                     if 'C' in listWaveforms:
-                        params['t_1stPr>1stE2'] = waveformIndices['E2'][0][0] - probe_locations[0][1]
+                        params['t>1stE2'] = waveformIndices['E2'][0][0] - probe_locations[0][0]
                     # print(params['n_E12'], len(phloem_locations))
                     # print(params['n_sgE1'])
                     # print(phloem_locations)
-                    params['a_E2/E']    = params['s_E2'] / (params['n_E12']+params['n_sgE1'])
-                    params['%E_fail']   = params['n_sgE1'] / (params['n_E12']+params['n_sgE1'])
-                    params['t_Pr>1stE2/1stPr'] = 0
+                    # params['a_E2/E']    = params['s_E2'] / (params['n_E12']+params['n_sgE1'])
+                    params['%phloem_ph_fail']   = params['n_sgE1'] / (params['n_E12']+params['n_sgE1'])
+                    params['tPr>1stE2/1stPr'] = 0
                     # s_probe_before_1stprobe_with_E = []
                     for prob_loc in probe_locations:
                         subAna = recAna[(recAna['time'] >= prob_loc[0]) & (recAna['time'] <= prob_loc[1])]
                         E2_loc = subAna[subAna['label'] == 5].index
                         if len(E2_loc) > 0:
-                            params['t_Pr>1stE2/1stPr'] = float(subAna.loc[E2_loc[0], 'time']) - prob_loc[0]
+                            params['tPr>1stE2/1stPr'] = float(subAna.loc[E2_loc[0], 'time']) - prob_loc[0]
                             break
-                    params['t_Pr>1stsE2/1stPr'] = 0
+                    params['tPr>1stsE2/1stPr'] = 0
                     for prob_loc in probe_locations:
                         subAna = recAna[(recAna['time'] >= prob_loc[0]) & (recAna['time'] <= prob_loc[1])]
                         sE2_loc = [subAna[subAna['time'] == location[0]].index[0] for location in sustainedE2_locations
                                                 if len(subAna[subAna['time'] == location[0]]) > 0]
                         if len(sE2_loc) > 0:
-                            params['t_Pr>1stsE2/1stPr'] = float(subAna.loc[sE2_loc[0], 'time']) - prob_loc[0]
+                            params['tPr>1stsE2/1stPr'] = float(subAna.loc[sE2_loc[0], 'time']) - prob_loc[0]
                             break                         
                     params['E2_index'] = params['s_E2'] / (recTime*3600 - waveformIndices['E2'][0][0])
                     # print(params['s_E2'], recTime*3600 - waveformIndices['E2'][0][0])
                     firstphloem = phloem_locations[0]
-                    params['d_1stE'] = firstphloem[1] - firstphloem[0]
+                    params['d_1st_E'] = firstphloem[1] - firstphloem[0]
 
-                params['s_E'] = params['s_E1'] + params['s_E2']
+                # params['s_E'] = params['s_E1'] + params['s_E2']
 
                 try:
                     params['E2/C_ratio']        = params['s_E2'] / params['s_C']
@@ -817,7 +832,7 @@ class EPGDataset:
                 params = pd.DataFrame(params)
                 params.set_index('name', inplace = True)
 
-                self.params.append(params)
+                recordingParams.append(params)
                 self.error_log[recName] = error_log
 
             else:
@@ -976,32 +991,33 @@ class EPGDataset:
                     params_hour.set_index('name', inplace = True)
                     progress_params.append(params_hour)
                 progress_params = pd.concat(progress_params)
-                self.params.append(progress_params)
+                recordingParams.append(progress_params)
 
         ############## Aggregation #################
-        if len(self.params) == 0:
+        if len(recordingParams) == 0:
             return 
         else:
             
             if separate_sheet == True:
                 if export_xlsx == True:
                     with pd.ExcelWriter(f'EPGParameters_{progress}.xlsx', engine='xlsxwriter') as writer:
-                        for params, name in zip(self.params, sheet_names):
+                        for params, name in zip(recordingParams, sheet_names):
                             assert view in ['row', 'column'], "Params 'view' must be 'row' or 'column'."
                             if view == 'column':
                                 params = params.transpose()
+                                params['Description'] = 
                             params.to_excel(writer, sheet_name=name)
                     print(f'Exported to {os.getcwd()}/EPGParameters_{progress}.xlsx')
             else:
-                self.params = pd.concat(self.params)
+                recordingParams = pd.concat(recordingParams)
                 if export_xlsx == True:
                     assert view in ['row', 'column'], "Params 'view' must be 'row' or 'column'."
                     if view == 'column':
-                        self.params = self.params.transpose()
+                        recordingParams = recordingParams.transpose()
                     with pd.ExcelWriter(f'EPGParameters_{progress}.xlsx', engine='xlsxwriter') as writer:
-                        self.params.to_excel(writer, sheet_name = progress)
+                        recordingParams.to_excel(writer, sheet_name = progress)
                     print(f'Exported to {os.getcwd()}/EPGParameters_{progress}.xlsx')
-        return self.params            
+        return recordingParams            
 
     def make_boxplot(self, params):
         pass 
@@ -1134,3 +1150,139 @@ def interval_intersection(a, b):
             return _get_intersection(a, b)
     else:
         raise RuntimeError('Expect list or tuple type input')
+
+
+variable_descriptions = {
+    ### meta 
+    'dataset': 'Name of the dataset',
+    'recTime': 'Total recording time',
+    'waveforms': 'Observed waveforms',
+    ### Non-probing
+    'n_NP': 'Number of NP periods',
+    'a_NP': 'Average duration of NP periods',
+    'm_NP': 'Median duration of NP periods',
+    's_NP': 'Sum duration of NP periods',
+    'mx_NP': 'Max duration of NP',
+    ### probing
+    'n_Pr': 'Number of probes',
+    'a_Pr': 'Average probe duration',
+    'm_Pr': 'Median probe duration',
+    's_Pr': 'Sum duration of all probes',
+    'd_1stPr': 'Duration of 1st probe',
+    'd_2ndPr': 'Duration of 2nd probe', ## ???
+    'n_shortPr': 'Number of short probes (< 3 min)',
+    'n_veryshortPr': 'Number of very short probes (< 1 min)', ## ???
+    ### pathway
+    'n_C': 'Number of C periods',
+    'a_C': 'Average duration of C periods',
+    'm_C': 'Median duration of C periods',
+    's_C': 'Sum duration of C periods',
+    ### Derailed stylet mechanics
+    'n_F': 'Number of F periods',
+    'a_F': 'Average duration of F periods',
+    'm_F': 'Median duration of F periods',
+    's_F': 'Sum duration of F periods',
+    ### Xylem
+    'n_G': 'Number of G periods',
+    'a_G': 'Average duration of G periods',
+    'm_G': 'Median duration of G periods',
+    's_G': 'Sum duration of G periods',
+    ### Pathway salivation 
+    'n_E1e': 'Number of E1e periods',
+    'a_E1e': 'Average duration of E1e periods',
+    'm_E1e': 'Median duration of E1e periods',
+    's_E1e': 'Sum duration of E1e periods',
+    ### Phloem-phase
+    'd_1st_E': 'Duration of the 1st phloem phase',
+    'n_sgE1': 'Number of single E1 periods',
+    'a_sgE1': 'Average duration of single E1 periods',
+    'm_sgE1': 'Median duration of single E1 periods',
+    's_sgE1': 'Sum duration of single E1 periods',
+    'mx_sgE1': 'Max duration of single E1 periods',
+##### NON-SEQUENTIAL VARIABLES #####
+    'n_frE1': 'Number of fraction E1 periods',
+    'a_frE1': 'Average duration of fraction E1 periods',
+    'm_frE1': 'Median duration of fraction E1 periods',
+    's_frE1': 'Sum duration of fraction E1 periods',
+    'mx_frE1': 'Max duration of fraction E1 periods',
+
+    'n_E1': 'Number of E1 periods',
+    'a_E1': 'Average duration of E1 periods',
+    'm_E1': 'Median duration of E1 periods',
+    's_E1': 'Sum duration of E1 periods',
+    'mx_E1': 'Max duration of E1 periods',
+
+    'n_E12': 'Number of E12 periods',
+    'a_E12': 'Average duration of E12 periods',
+    'm_E12': 'Median duration of E12 periods',
+    's_E12': 'Sum duration of E12 periods',
+    'mx_E12': 'Max duration of E12 periods',
+
+    'n_E2': 'Number of E2 periods',
+    'a_E2': 'Average duration of E2 periods',
+    'm_E2': 'Median duration of E2 periods',
+    's_E2': 'Sum duration of E2 periods',
+    'mx_E2': 'Max duration of E2 periods',
+    'a_E2_per_phloem': 'Average duration of E2 per phloem phase',
+    'd_1st_E2': 'Duration of 1st E2 in the recording',
+    'n_sE2': 'Number of sustained E2 periods',
+    'a_sE2': 'Average duration of sustained E2 periods',
+    'm_sE2': 'Median duration of sustained E2 periods',
+    's_sE2': 'Sum duration of sustained E2 periods',
+
+
+#### SEQUENTIAL VARIABLES ####
+    ### probing
+    't>1stPr': 'Time to 1st probe from start of recording',
+    ### Phloem phase
+    't>1stE': 'Time from the 1st probe to the start of 1st E1',
+    't>1stE12': 'Time from the 1st probe to the start of 1st E12',
+    't>1stE2': 'Time from the 1st probe to the start of 1st E2',
+    't>1stsE2': 'Time from the 1st probe to the start of 1st sE2',
+    'tPr>1stE/1stPr': 'Time from the begining of that probe to 1st E',
+    'tPr>1stE2/1stPr': 'Time from the begining of that probe to 1st E2',
+    'tPr>1stsE2/1stPr': 'Time from the begining of that probe to 1st sE2',
+
+    'n_Pr>1stE1': 'Number of probe before 1st E1',
+    'n_brPr>1stE1': 'Number of short probe before 1st E1',
+    'n_Pr>1stE2': 'Number of probe before 1st E2',
+    'n_Pr>1stsE2': 'Number of probe before 1st sE2',
+    'n_E2>1stsE2': 'Number of E2 before 1st sE2',
+    'n_Pr.after.1stE1': 'Number of probe after 1st E1',
+    'n_brPr.after.1stE1': 'Number of short probe after 1st E1',
+    'n_Pr.after.1stsE2': 'Number of probe after 1st sE2',
+    ### sequential variables
+    'd_E1follwedbyE2': 'Duration of E1 follwed by E2',
+    'd_E1follwedbysE2': 'Duration of E1 follwed by sustained E2',
+    'E2/C_ratio': 'E2/C ratio',
+    'E1_index': 'E1 index',
+    'frE1_ratio': 'fraction E1 ratio',
+    'E2_index': 'E2 index',
+    '%probtimeinC': '% of probe duration spent in C',
+    '%probtimeinF': '% of probe duration spent in F',
+    '%probtimeinG': '% of probe duration spent in G',
+    '%probtimeinE1': '% of probe duration spent in E1',
+    '%probtimeinE2': '% of probe duration spent in E2',
+    '%_sE2': '% of E2s that are sustained E2s',
+    # Standard potential drops (pd)
+    'n_pd/minC': 'Number of pds per minute of pathwave phase',
+    'n_pd': 'Number of pd periods',
+    'a_pd': 'Average duration of pd periods',
+    'm_pd': 'Median duration of pd periods',
+    's_pd': 'Sum duration of pd periods',
+    't>1stpd': 'Time to 1st pd from start of recording',
+    't>1stpd/1stPr': 'Time to 1st pd from the start of 1st probe',
+
+    's_NP>1stE1': 'Sum of duration of NP before 1st E1',
+    'a_initialE1': 'Average duration of initial E1',
+    '%phloem_ph_fail': '% of phloem phases that fail to achieve ingestion',
+    # 's_E':,
+    
+
+    
+    
+    # 'a_E2/E':,
+    
+
+     
+}

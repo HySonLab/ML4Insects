@@ -1,20 +1,20 @@
-# DiscoEPG (Discovery EPG) - A library for EPG signal analysis of pierce-sucking insects 🐞🍃⚡💻
+# DiscoEPG (Discover EPG) - A library for EPG signal analysis of piercing-sucking insects 🐞🍃⚡💻
 ![ML4Insects](/figures/disco-concepts.png)
 \
 [PyPI Link](https://pypi.org/project/DiscoEPG/)
 ## 🌎 Overview
-Electrical penetration graph (EPG) is a technique used to study the feeding behavior of sucking insects such as aphids. Specifically, the experimental insect and host plant are made part of an electrical circuit, which is closed when aphid mouthparts penetrate plant tissue. When the aphid stylet is inserted intercellularly, the voltage is positive and when inserted intracellularly, the voltage is negative. Waveforms in EPG have been correlated to specific aphid feeding behaviors by stylectomy followed by microscopy of the plant tissue to determine the approximate location of the stylet as well as observing aphid head movement, posture, and muscle dynamics. EPG is well established and has been widely used to study the mechanisms of plant virus transmission by aphids, the effect of resistant and susceptible lines on aphid feeding behaviors, and to better our understanding of the mechanisms that aphids use to continuously drink from the phloem. 
+Electrical penetration graph (EPG) is a technique used to study the feeding behavior of piercing-sucking insects such as aphids. Specifically, the experimental insect and host plant are made part of an electrical circuit, which is closed when aphid mouthparts penetrate plant tissue. When the aphid stylet is inserted intercellularly, the voltage is positive and when inserted intracellularly, the voltage is negative. Waveforms in EPG have been correlated to specific aphid feeding behaviors by stylectomy followed by microscopy of the plant tissue to determine the approximate location of the stylet as well as observing aphid head movement, posture, and muscle dynamics. EPG is well established and has been widely used to study the mechanisms of plant virus transmission by aphids, the effect of resistant and susceptible lines on aphid feeding behaviors, and to better our understanding of the mechanisms that aphids use to continuously feed from the phloem. 
 
 ![ML4Insects](/figures/workflow.png "Workflow of the segmentation approach used in the package.")
 
-DiscoEPG (abbreviated for Discovery-EPG) package is an open-source Python package, designed to be compatible with the popular Stylet+ EPG System by W. F. Tjallingii [1]. DiscoEPG provides many utilities including data visualization, accurate automatic segmentation, and calculations of various EPG parameters, which facilitate the data analysis stage in the study of EPG signals. The package was used as a helpful support tool for our study in characterizing aphid's behavior based on this data. 
+The DiscoEPG (abbreviated for Discover-EPG) package is an open-source Python package, designed to be compatible with the popular Stylet+ EPG System by W. F. Tjallingii [1]. DiscoEPG provides many utilities including data visualization, accurate automatic segmentation and annotation of waveforms, and calculations of various EPG parameters, which facilitate the data analysis stage in the study of EPG signals. The package was used as a helpful support tool for our study in characterizing aphid's behavior based on this data. 
 
 The novelty of DiscoEPG lies in the automatic segmentation procedure, which follows a sliding-window technique where the entire signal is broken into non-overlapping segments, then the each of them is labeled independently before concatenating the predictions to form a unified segmentation. Despite being simple, we observe great performance in terms of 1) the segment classification results and 2) the overlap rate between the prediction and the ground-truth aggregated segmentation. 
 
 ## 📁 Novel features of DiscoEPG
 
 ### ML for characterizing EPG waveforms
-DiscoEPG provides two trainer objects `EPGSegment` and `EPGSegmentML` which respectively support training Deep Learning (CNN1D, ResNet and CNN2D) and Traditional Machine Learning (XGB, Random Forest, Logistic Regression) for automatically detect EPG waveforms. For Deep Learning models, it is possible to save the trained model for future use, while only `XGB` from the other group provide a similar function. The prediction results can be plot to visually assess or make post-prediction refinement, as alignment errors is unavoidable. To make this step easier, `EPGSegment` allows saving the prediction result in a `*.ANA` file which can be processed by Stylet+. 
+DiscoEPG provides two trainer objects `EPGSegment` and `EPGSegmentML` which respectively support training Deep Learning models (CNN1D, ResNet and CNN2D) and Traditional Machine Learning models (XGB, Random Forest, Logistic Regression) for automatically detecting EPG waveforms. For Deep Learning models, it is possible to save the trained model for future use, while only `XGB` from the other group provide a similar function. The prediction results can be plotted to visually assess or make post-prediction refinement, as small alignment errors are unavoidable. To make this step easier, `EPGSegment` allows saving the prediction result in a `*.ANA` file which can be later processed by Stylet+. 
 
 ### Visualization
 DiscoEPG allows users to create color plots,  in both _static_ and _interactive_ states of EPG recordings. The data visualization functions are based on well-known visualization libraries such as matplotlib and plotly. To help with visualizing a huge numbers of data points, `plotly-resampler` [2] was incorporated into our package. The figure below shows an example of a plot between the predicted segmentation and the ground-truth version. The overlap rate is 95%, where the errors were mostly caused by minor waveforms such as pd. 
@@ -34,18 +34,18 @@ To install DiscoEPG, simply run
 pip install DiscoEPG
 ```
 
-For DiscoEPG to run properly, you only need to prepare a dataset folder which contains all the dataset containing recordings with the ASCII format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Corresponding to each dataset named `<dataset_name>`, there should be one subfolder called `<dataset_name>` containing the recording data (with `.D0x`extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple recording files, which will be concatenate into one complete recording. 
+For DiscoEPG to run properly, you only need to prepare a dataset folder which contains the recordings with the .D0x format and the annotation files with the .ANA format obtained from [Stylet+ application](https://www.DiscoEPGystems.eu/). Inside the data-containing folder named `<data>`, there should be one subfolder called `<dataset_name>` containing the recording data (with `.D0x`extension) and another one called `<dataset_name>_ANA` containing the waveform position (with `.ANA` extension). Each complete recording comprises of multiple hour-long recording files, which will be concatenated into one complete recording. 
 
 For example 
 ```
 working directory
 ├── data
 │   ├── dataset
-|   |   └── dataset.name0.A01
-|   |   └── dataset.name1.A01
+|   |   └── dataset.name0.D01
+|   |   └── dataset.name1.D01
 |   |   └── ...
-|   |   └── dataset.name0.A08
-|   |   └── dataset.name1.A08
+|   |   └── dataset.name0.D08
+|   |   └── dataset.name1.D08
 |   ├── dataset_ANA
 |   |   └── dataset.name0_ANA
 |   |   └── dataset.name1_ANA

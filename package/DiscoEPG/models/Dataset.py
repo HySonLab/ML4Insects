@@ -414,46 +414,37 @@ class EPGDataset:
             params['waveforms'] = ', '.join(listWaveforms)
             
             if progress == 'overall':
+
                 ############ NP (non-probing) #############
-
                 if 'NP' not in listWaveforms:
-
-                    params['s_NP']  = 0 
-                    params['n_NP']    = 0 
-                    params['a_NP']   = 0   
-                    params['m_NP'] = 0   
-                    params['mx_NP']    = 0     
- 
-                    error_log.append('No NP waveform found.')                  
-                else:
-                    NP_durations        = [x[1] - x[0] for x in waveformIndices['NP']]
-                    params['s_NP']  = float(np.sum(NP_durations).astype(np.float32))
-                    params['n_NP']    = len(waveformIndices['NP'])
-                    params['a_NP']   = float(np.mean(NP_durations).astype(np.float32))
-                    params['m_NP'] = float(np.median(NP_durations).astype(np.float32))  
-                    params['mx_NP']    = float(np.max(NP_durations).astype(np.float32))
-
+                    raise RuntimeError('No NP waveform found.')  
+                    # params['s_NP']  = None
+                    # params['n_NP']  = None
+                    # params['a_NP']  = None  
+                    # params['m_NP']  = None  
+                    # params['mx_NP'] = None    
+      
+                # else:
+                NP_durations    = [x[1] - x[0] for x in waveformIndices['NP']]
+                params['s_NP']  = float(np.sum(NP_durations).astype(np.float32))
+                params['n_NP']  = len(waveformIndices['NP'])
+                params['a_NP']  = float(np.mean(NP_durations).astype(np.float32))
+                params['m_NP']  = float(np.median(NP_durations).astype(np.float32))  
+                params['mx_NP'] = float(np.max(NP_durations).astype(np.float32))
 
                 ############ C, pd, probes ############# (Assuming that a recording always have C -> always have probes)
                 if 'C' not in listWaveforms:
-                    error_log.append('No C waveform found.')
-                probe_locations = get_stage(recAna, stage = 'probe')
-                probes_durations        = [x[1] - x[0] for x in probe_locations]
-                params['s_Pr']  =   float(np.sum(probes_durations).astype(np.float32))
-                params['n_Pr']    =   len(probes_durations)
-                params['a_Pr']   =   float(np.mean(probes_durations).astype(np.float32))
-                params['m_Pr'] =   float(np.median(probes_durations).astype(np.float32))
+                    raise RuntimeError('No C waveform found.')
 
-                # Total duration of C, Number of C, Mean duration of C 
-                C_durations         = [x[1] - x[0] for x in waveformIndices['C']]
-                params['s_C']   = float(np.sum(C_durations).astype(np.float32))
-                params['n_C']     = len(C_durations)
-                params['a_C']    = float(np.mean(C_durations).astype(np.float32))
-                params['m_C']  = float(np.median(C_durations).astype(np.float32))
-                params['%probtimeinC']  = params['s_C'] / params['s_Pr']
+                probe_locations     = get_stage(recAna, stage = 'probe')
+                probes_durations    = [x[1] - x[0] for x in probe_locations]
+                params['s_Pr']      =   float(np.sum(probes_durations).astype(np.float32))
+                params['n_Pr']      =   len(probes_durations)
+                params['a_Pr']      =   float(np.mean(probes_durations).astype(np.float32))
+                params['m_Pr']      =   float(np.median(probes_durations).astype(np.float32))
 
                 # Time from start of the experiment to 1st probe
-                params['t>1stPr'] = waveformIndices['C'][0][0]
+                params['t>1stPr'] = probe_locations[0][0]
 
                 # Duration of 1st probe, Duration of 2nd probe
                 params['d_1stPr'] = probe_locations[0][1] - probe_locations[0][0]
@@ -469,124 +460,128 @@ class EPGDataset:
                 # Number of very short probes (<1 min)
                 veryshortprobe_locations = [x for x in probe_locations if x[1] - x[0] < 60 and x[1] - x[0] > 0]
                 params['n_veryshortPr'] = len(veryshortprobe_locations)     
+                
+                # Total duration of C, Number of C, Mean duration of C 
+                C_durations         = [x[1] - x[0] for x in waveformIndices['C']]
+                params['s_C']       = float(np.sum(C_durations).astype(np.float32))
+                params['n_C']       = len(C_durations)
+                params['a_C']       = float(np.mean(C_durations).astype(np.float32))
+                params['m_C']       = float(np.median(C_durations).astype(np.float32))
+                params['%probtimeinC']  = params['s_C'] / params['s_Pr']
 
                 # Number of pd, Mean duration of pd
                 if 'pd' not in listWaveforms:
-                    params['s_pd']  = 0 
-                    params['a_pd']   = 0 
-                    params['n_pd']    = 0 
-                    params['n_pd/minC']    = 0 
-                    params['m_pd'] = 0 
-                    params['t>1stpd']  = 0 
-
-                    params['t>1stpd/1stPr'] = 0 
+                    params['s_pd']      = None
+                    params['a_pd']      = None
+                    params['n_pd']      = None
+                    params['n_pd/minC'] = None
+                    params['m_pd']      = None
+                    params['t>1stpd']   = None
+                    params['t>1stpd/1stPr'] = None
                 else:
                     pd_durations        = [x[1] - x[0] for x in waveformIndices['pd']]
-                    params['s_pd']  = float(np.sum(pd_durations).astype(np.float32))
-                    params['n_pd']    = len(pd_durations)
-                    params['n_pd/minC']    = params['n_pd']/(params['s_C']/60) 
-                    params['a_pd']   = float(np.mean(pd_durations).astype(np.float32))
-                    params['m_pd'] = float(np.median(pd_durations).astype(np.float32))
-                    params['t>1stpd']  = waveformIndices['pd'][0][0]
-
+                    params['s_pd']      = float(np.sum(pd_durations).astype(np.float32))
+                    params['n_pd']      = len(pd_durations)
+                    params['n_pd/minC'] = params['n_pd']/(params['s_C']/60) 
+                    params['a_pd']      = float(np.mean(pd_durations).astype(np.float32))
+                    params['m_pd']      = float(np.median(pd_durations).astype(np.float32))
+                    params['t>1stpd']   = waveformIndices['pd'][0][0]
                     params['t>1stpd/1stPr'] = waveformIndices['pd'][0][0] - probe_locations[0][0]
                             
                 ############ F #############
-                # Total duration of F, Total duration of F during the 1st, 2nd, ..., 8th h, 
-                # Number of F, Number of F during the 1st, 2nd, ..., 8th h, Mean duration of F
+                # Total duration of F, Total duration of F during the 1st, 2nd, ..., 8th h
                 if 'F' not in listWaveforms:
-                    params['s_F']   = 0 
-                    params['a_F']    = 0 
-                    params['n_F']     = 0 
-                    params['m_F']  = 0 
-                    params['%probtimeinF']  = 0 
+                    error_log.append('No F waveform found.')
+                    params['s_F']       = None
+                    params['a_F']       = None
+                    params['n_F']       = None
+                    params['m_F']       = None
+                    params['%probtimeinF']  = None
 
                 else:
                     F_durations         = [x[1] - x[0] for x in waveformIndices['F']]
-                    params['s_F']   = float(np.sum(F_durations).astype(np.float32))
-                    params['n_F']     = len(F_durations)
-                    params['a_F']    = float(np.mean(F_durations).astype(np.float32))
-                    params['m_F']  = float(np.median(F_durations).astype(np.float32))
+                    params['s_F']       = float(np.sum(F_durations).astype(np.float32))
+                    params['n_F']       = len(F_durations)
+                    params['a_F']       = float(np.mean(F_durations).astype(np.float32))
+                    params['m_F']       = float(np.median(F_durations).astype(np.float32))
                     params['%probtimeinF']  = params['s_F'] / params['s_Pr']
 
                 ################# G ################# 
                 # Total duration of G, Number of G, Mean duration of G
                 if 'G' not in listWaveforms:
-                    params['s_G']   = 0 
-                    params['a_G']    = 0 
-                    params['n_G']     = 0 
-                    params['m_G']  = 0 
-                    params['%probtimeinG']  = 0 
-                    # for i in range(1, int(recTime) + 1):
-                    #     params[f'n_G_h{i}'] = 0 
-                    #     params[f's_G_h{i}'] = 0 
+                    error_log.append('No G waveform found.')
+                    params['s_G']       = None
+                    params['a_G']       = None
+                    params['n_G']       = None
+                    params['m_G']       = None
+                    params['%probtimeinG']  = None
                 else:
                     G_durations         = [x[1] - x[0] for x in waveformIndices['G']]
-                    params['s_G']   = float(np.sum(G_durations).astype(np.float32))
-                    params['n_G']     = len(G_durations)
-                    params['a_G']    = float(np.mean(G_durations).astype(np.float32))
-                    params['m_G']  = float(np.median(G_durations).astype(np.float32))
+                    params['s_G']       = float(np.sum(G_durations).astype(np.float32))
+                    params['n_G']       = len(G_durations)
+                    params['a_G']       = float(np.mean(G_durations).astype(np.float32))
+                    params['m_G']       = float(np.median(G_durations).astype(np.float32))
                     params['%probtimeinG']  = params['s_G'] / params['s_Pr']
                 ################# E, E1, E2 ################# 
 
                 # Total duration of E1e, Number of E1e, Mean duration of E1
                 if 'E1e' not in listWaveforms: 
-                    params['s_E1e']  = 0 
-                    params['a_E1e']   = 0 
-                    params['n_E1e']    = 0 
-                    params['m_E1e'] = 0 
+                    error_log.append('No E1e waveform found.')
+                    params['s_E1e']     = None
+                    params['a_E1e']     = None
+                    params['n_E1e']     = None
+                    params['m_E1e']     = None
 
                 else:
-                    E1e_durations        = [x[1] - x[0] for x in waveformIndices['E1e']]
-                    params['s_E1e']  = float(np.sum(E1e_durations).astype(np.float32))
-                    params['n_E1e']    = len(waveformIndices['E1e'])
-                    params['a_E1e']   = float(np.mean(E1e_durations).astype(np.float32))
-                    params['m_E1e'] = float(np.median(E1e_durations).astype(np.float32))
+                    E1e_durations       = [x[1] - x[0] for x in waveformIndices['E1e']]
+                    params['s_E1e']     = float(np.sum(E1e_durations).astype(np.float32))
+                    params['n_E1e']     = len(waveformIndices['E1e'])
+                    params['a_E1e']     = float(np.mean(E1e_durations).astype(np.float32))
+                    params['m_E1e']     = float(np.median(E1e_durations).astype(np.float32))
 
                 
                 # Total duration of E1, Number of E1, Mean duration of E1
                 if 'E1' not in listWaveforms: 
                     # E1
-                    params['s_E1']  = 0 
-                    params['a_E1']   = 0 
-                    params['n_E1']    = 0 
-                    params['m_E1'] = 0 
-                    params['mx_E1']    = 0 
-                    params['%probtimeinE1'] = 0 
+                    error_log.append('No E1 waveform found.')
+                    params['s_E1']      = None
+                    params['a_E1']      = None
+                    params['n_E1']      = None
+                    params['m_E1']      = None
+                    params['mx_E1']     = None
+                    params['%probtimeinE1'] = None
                     # Single E1
-                    params['s_sgE1']   = 0 
-                    params['n_sgE1']     = 0 
-                    params['a_sgE1']    = 0 
-                    params['m_sgE1']  = 0 
-                    params['mx_sgE1']     = 0 
+                    params['s_sgE1']    = None
+                    params['n_sgE1']    = None
+                    params['a_sgE1']    = None
+                    params['m_sgE1']    = None
+                    params['mx_sgE1']   = None
                     # Fraction E1
-                    params['s_frE1']   = 0 
-                    params['n_frE1']     = 0 
-                    params['a_frE1']    = 0 
-                    params['m_frE1']  = 0 
-                    params['mx_frE1']     = 0    
+                    params['s_frE1']    = None
+                    params['n_frE1']    = None
+                    params['a_frE1']    = None
+                    params['m_frE1']    = None
+                    params['mx_frE1']   = None   
                     # Number of probes/NP before first E1
-                    params['n_Pr>1stE1']          = 0 
-                    params['n_brPr>1stE1']    = 0 
-                    params['n_Pr.after.1stE1']       = 0 
-                    params['n_brPr.after.1stE1'] = 0 
-                    params['s_NP>1stE1']                = 0 
-
-                    params['t>1stE'] = 0  # Time from 1st probe to 1st E
-                
-                    phloem_durations = []
-                    params['d_1st_E'] = 0 
+                    params['n_Pr>1stE1']        = None
+                    params['n_brPr>1stE1']      = None
+                    params['n_Pr.after.1stE1']  = None
+                    params['n_brPr.after.1stE1']= None
+                    params['s_NP>1stE1']        = None
+                    params['t>1stE']            = None # Time from 1st probe to 1st E
+                    params['d_1st_E']           = None
+                    params['tPr>1stE/1stPr']    = None
 
                 else:
+                    phloem_locations = get_stage(recAna, stage = 'phloem')
                     # E1
                     E1_durations        = [x[1] - x[0] for x in waveformIndices['E1']]
-                    params['s_E1']  = float(np.sum(E1_durations).astype(np.float32))
-                    params['n_E1']    = len(waveformIndices['E1'])
-                    params['a_E1']   = float(np.mean(E1_durations).astype(np.float32))
-                    params['m_E1'] = float(np.median(E1_durations).astype(np.float32))
-                    params['mx_E1']    = float(np.max(E1_durations).astype(np.float32))
+                    params['s_E1']      = float(np.sum(E1_durations).astype(np.float32))
+                    params['n_E1']      = len(waveformIndices['E1'])
+                    params['a_E1']      = float(np.mean(E1_durations).astype(np.float32))
+                    params['m_E1']      = float(np.median(E1_durations).astype(np.float32))
+                    params['mx_E1']     = float(np.max(E1_durations).astype(np.float32))
                     params['%probtimeinE1'] = params['s_E1'] / params['s_Pr']
-                    
                     # Single E1
                     tmp = recAna[recAna['label'] == 4]
                     singleE1_locations = []
@@ -595,140 +590,148 @@ class EPGDataset:
                             singleE1_locations.append([recAna.loc[i+1, 'time'], recAna.loc[i, 'time']])
                     singleE1_durations = [x[1] - x[0] for x in singleE1_locations]
                     if len(singleE1_durations) == 0:
-                        params['s_sgE1']   = 0 
-                        params['n_sgE1']     = 0 
+                        params['s_sgE1']    = 0 
+                        params['n_sgE1']    = 0 
                         params['a_sgE1']    = 0 
-                        params['m_sgE1']  = 0 
-                        params['mx_sgE1']     = 0                
+                        params['m_sgE1']    = 0 
+                        params['mx_sgE1']   = 0                
                     else:
-                        params['s_sgE1']   = float(np.sum(singleE1_durations).astype(np.float32))
-                        params['n_sgE1']     = len(singleE1_durations)
+                        params['s_sgE1']    = float(np.sum(singleE1_durations).astype(np.float32))
+                        params['n_sgE1']    = len(singleE1_durations)
                         params['a_sgE1']    = float(np.mean(singleE1_durations).astype(np.float32))
-                        params['m_sgE1']  = float(np.median(singleE1_durations).astype(np.float32))
-                        params['mx_sgE1']     = float(np.max(singleE1_durations).astype(np.float32))
+                        params['m_sgE1']    = float(np.median(singleE1_durations).astype(np.float32))
+                        params['mx_sgE1']   = float(np.max(singleE1_durations).astype(np.float32))
                     
                     # fraction E1
                     frE1_locations = [x for x in waveformIndices['E1'] if x not in singleE1_locations]
                     frE1_durations = [x[1] - x[0] for x in frE1_locations]
                     if len(frE1_durations) == 0:
-                        params['s_frE1']   = 0 
-                        params['n_frE1']     = 0 
+                        params['s_frE1']    = 0 
+                        params['n_frE1']    = 0 
                         params['a_frE1']    = 0 
-                        params['m_frE1']  = 0 
-                        params['mx_frE1']     = 0                
+                        params['m_frE1']    = 0 
+                        params['mx_frE1']   = 0                
                     else:
-                        params['s_frE1']   = float(np.sum(frE1_durations).astype(np.float32))
-                        params['n_frE1']     = len(frE1_durations)
+                        params['s_frE1']    = float(np.sum(frE1_durations).astype(np.float32))
+                        params['n_frE1']    = len(frE1_durations)
                         params['a_frE1']    = float(np.mean(frE1_durations).astype(np.float32))
-                        params['m_frE1']  = float(np.median(frE1_durations).astype(np.float32))
-                        params['mx_frE1']     = float(np.max(frE1_durations).astype(np.float32))      
+                        params['m_frE1']    = float(np.median(frE1_durations).astype(np.float32))
+                        params['mx_frE1']   = float(np.max(frE1_durations).astype(np.float32))      
 
                     firstE1                                 = waveformIndices['E1'][0]
                     probes2firstE1                          = [probe for probe in probe_locations if probe[1] < firstE1[0]]
-                    params['n_Pr>1stE1']          = len(probes2firstE1)
-                    NP2firstE                               = [NPdur for NPdur in waveformIndices['NP'] if NPdur[1] < firstE1[0]]
-                    params['s_NP>1stE1']                = float(np.sum(NP2firstE).astype(np.float32))
+                    params['n_Pr>1stE1']                    = len(probes2firstE1)
 
                     shortprobes2firstE1                     = [probe for probe in shortprobe_locations if probe[1] < firstE1[0]]
-                    params['n_brPr>1stE1']    = len(shortprobes2firstE1)
+                    params['n_brPr>1stE1']                  = len(shortprobes2firstE1)
 
-                    probesafterfirstE1                      = [probe for probe in shortprobe_locations if probe[0] > firstE1[1]]
-                    params['n_Pr.after.1stE1']       = len(probesafterfirstE1)
+                    probesafterfirstE1                      = [probe for probe in probe_locations if probe[0] > firstE1[1]]
+                    params['n_Pr.after.1stE1']              = len(probesafterfirstE1)
 
-                    shortprobesafterfirstE1                 = [probe for probe in probe_locations if probe[0] > firstE1[1] \
-                                                                and probe[1] - probe[0] < 180.]
-                    params['n_brPr.after.1stE1'] = len(shortprobesafterfirstE1)
-                    
-                    phloem_locations = get_stage(recAna, stage = 'phloem')
-                    phloem_durations = [x[1] - x[0] for x in phloem_locations]
-                    initialE1s = []
-                    for phlo_loc in phloem_locations:
-                        filt = recAna['time'] == phlo_loc[0]
-                        initialE1_idx = recAna[filt].index
-                        d_initialE1 = recAna.loc[initialE1_idx + 1, 'time'] - recAna.loc[initialE1_idx, 'time']
-                        initialE1s.append(d_initialE1)
-                    if len(initialE1s) > 0:
-                        params['a_initialE1'] = float(np.mean(initialE1s))
-                    else:
-                        params['a_initialE1'] = 0
-                    try:
-                        params['E1_index']     = params['s_E1'] / (params['s_E12'] + params['s_sgE1'])
-                    except Exception as e:  
-                        params['E1_index'] = 0  
-                    try:
-                        params['frE1_ratio']   = params['n_frE1'] / params['n_E12']
-                    except Exception as e:
-                        params['frE1_ratio']   = 0 
-                        error_log.append('frE1_ratio ' + str(e))
-                        #print('frE1_ratio ' + str(e))
+                    shortprobesafterfirstE1                 = [probe for probe in shortprobe_locations if probe[0] > firstE1[1]]
+                    params['n_brPr.after.1stE1']            = len(shortprobesafterfirstE1)
 
-                    if 'C' in listWaveforms:
-                        params['t>1stE'] = waveformIndices['E1'][0][0] - probe_locations[0][0]   
-                    
-                    params['tPr>1stE/1stPr'] = 0
-                    # s_probe_before_1stprobe_with_E = []
-                    for prob_loc in probe_locations:
-                        subAna = recAna[(recAna['time'] >= prob_loc[0]) & (recAna['time'] <= prob_loc[1])]
-                        E_loc = subAna[subAna['label'] == 4].index
-                        # if len(E_loc) == 0:
-                        #     s_probe_before_1stprobe_with_E.append(prob_loc[1] - prob_loc[0])
-                        # else:
-                            # s_probe_before_1stprobe_with_E.append(float(subAna.loc[E_loc[0], 'time']) - prob_loc[0])
-                        if len(E_loc) > 0:
-                            params['tPr>1stE/1stPr'] = float(subAna.loc[E_loc[0], 'time']) - prob_loc[0]
-                            break                
+                    NP2firstE                               = [NPdur for NPdur in waveformIndices['NP'] if NPdur[1] < firstE1[0]]
+                    params['s_NP>1stE1']                    = float(np.sum(NP2firstE).astype(np.float32))
+
+                    # # phloem_durations = [x[1] - x[0] for x in phloem_locations]
+                    # initialE1s = []
+                    # for phlo_loc in phloem_locations:
+                    #     filt = recAna['time'] == phlo_loc[0]
+                    #     initialE1_idx = recAna[filt].index
+                    #     d_initialE1 = recAna.loc[initialE1_idx + 1, 'time'] - recAna.loc[initialE1_idx, 'time']
+                    #     initialE1s.append(d_initialE1)
+                    # if len(initialE1s) > 0:
+                    #     params['a_initialE1'] = float(np.mean(initialE1s))
+                    # else:
+                    #     params['a_initialE1'] = 0
+
+                    params['t>1stE'] = waveformIndices['E1'][0][0] - probe_locations[0][0]   
+                                   
                     firstphloem = phloem_locations[0]
                     params['d_1st_E'] = firstphloem[1] - firstphloem[0]
 
-                # Total duration of E2, Number of E2, Mean duration of E2
+                    for prob_loc in probe_locations:
+                        subAna = recAna[(recAna['time'] >= prob_loc[0]) & (recAna['time'] <= prob_loc[1])]
+                        E_loc = subAna[subAna['label'] == 4].index
+                        if len(E_loc) > 0:
+                            params['tPr>1stE/1stPr'] = float(subAna.loc[E_loc[0], 'time']) - prob_loc[0]
+                            break 
+
                 if 'E2' not in listWaveforms: 
-                    params['s_E2']  = 0 
-                    params['a_E2']   = 0 
-                    params['n_E2']    = 0 
-                    params['m_E2'] = 0 
-                    params['mx_E2']    = 0 
-                    params['t>1stE2'] = 0 # Time from the 1st probe to 1st E2
-                    params['d_1st_E2']  = 0 
-                    params['a_E2_per_phloem']    = 0 
-                    params['%probtimeinE2'] = 0 
-
-                    params['s_sE2']  = 0 
-                    params['n_sE2']    = 0 
-                    params['a_sE2']   = 0 
-                    params['m_sE2'] = 0 
-                    params['t>1stsE2'] = 0 # Time from the 1st probe to 1st E2
-                    
-
+                    # Total duration of E2, Number of E2, Mean duration of E2
+                    params['s_E2']      = None
+                    params['a_E2']      = None
+                    params['n_E2']      = None
+                    params['m_E2']      = None
+                    params['mx_E2']     = None
+                    params['t>1stE2']   = None # Time from the 1st probe to 1st E2
+                    params['d_1st_E2']  = None
+                    params['a_E2_per_phloem']   = None
+                    params['%probtimeinE2']     = None
+                    # sustained E2
+                    params['s_sE2']     = None
+                    params['n_sE2']     = None
+                    params['a_sE2']     = None
+                    params['m_sE2']     = None
+                    params['t>1stsE2']  = None# Time from the 1st probe to 1st E2
                     # E12 
-                    params['s_E12']   = 0 
-                    params['n_E12']     = 0 
-                    params['a_E12']    = 0 
-                    params['m_E12']  = 0 
-                    params['mx_E12']     = 0        
-                    params['t>1stE12'] = 0  # Time from 1st probe to 1st E12    
+                    params['s_E12']     = None
+                    params['n_E12']     = None
+                    params['a_E12']     = None
+                    params['m_E12']     = None
+                    params['mx_E12']    = None       
+                    params['t>1stE12']  = None # Time from 1st probe to 1st E12 
+                    # E1 followed by E2/sE2
+                    params['d_E1follwedbyE2']   = None  
+                    params['d_E1follwedbysE2']  = None   
+                    # Miscs
+                    params['n_Pr>1stE2']        = None
+                    params['n_Pr>1stsE2']       = None
+                    params['n_E2>1stsE2']       = None
+                    params['n_Pr.after.1stsE2'] = None
                     
-                    params['n_Pr>1stE2']     = 0
-                    params['n_Pr>1stsE2']     = 0 
-                    params['n_E2>1stsE2'] = 0 
-                    params['n_Pr.after.1stsE2']   = 0 
-                    # params['%E2s_in_E2']   = 0 
-                else:
-                    E2_durations        = [x[1] - x[0] for x in waveformIndices['E2']]
-                    params['s_E2']  = float(np.sum(E2_durations).astype(np.float32))
-                    params['n_E2']    = len(waveformIndices['E2'])
-                    params['a_E2']   = float(np.mean(E2_durations).astype(np.float32))
-                    params['m_E2'] = float(np.median(E2_durations).astype(np.float32))
-                    params['mx_E2']    = float(np.max(E2_durations).astype(np.float32))
-                    params['d_1st_E2']   = E2_durations[0]
-                    params['%probtimeinE2'] = params['s_E2'] / params['s_Pr']
+                    params['%_sE2']             = None
+                    params['tPr>1stE2/1stPr']   = None
+                    params['tPr>1stsE2/1stPr']  = None 
 
-                    sustainedE2_locations         = [x for x in waveformIndices['E2'] if x[1] - x[0] > 600.]
-                    sustainedE2_durations = [x[1] - x[0] for x in sustainedE2_locations]
-                    params['s_sE2']  = float(np.sum(sustainedE2_durations).astype(np.float32))
-                    params['n_sE2']    = len(sustainedE2_durations)
-                    params['a_sE2']   = float(np.mean(sustainedE2_durations).astype(np.float32))
-                    params['m_sE2'] = float(np.median(sustainedE2_durations).astype(np.float32))
-                    params['t>1stsE2'] = sustainedE2_locations[0][0] - probe_locations[0][1]
+                    params['E2_index']          = None
+                    params['E1_index']          = None
+                    params['frE1_ratio']        = None
+                    params['%phloem_ph_fail']   = None
+                    params['E2/C_ratio']        = None
+
+                else:
+                    # E2
+                    E2_durations        = [x[1] - x[0] for x in waveformIndices['E2']]
+                    params['s_E2']      = float(np.sum(E2_durations).astype(np.float32))
+                    params['n_E2']      = len(waveformIndices['E2'])
+                    params['a_E2']      = float(np.mean(E2_durations).astype(np.float32))
+                    params['m_E2']      = float(np.median(E2_durations).astype(np.float32))
+                    params['mx_E2']     = float(np.max(E2_durations).astype(np.float32))
+                    params['t>1stE2']   = waveformIndices['E2'][0][0] - probe_locations[0][0]
+                    params['d_1st_E2']  = E2_durations[0]
+                    params['%probtimeinE2'] = params['s_E2'] / params['s_Pr']
+                    if len(phloem_locations) == 0:
+                        params['a_E2_per_phloem'] = 0 
+                    else:
+                        params['a_E2_per_phloem'] = params['s_E2']/len(phloem_locations)
+                    # sustained E2
+                    sustainedE2_locations   = [x for x in waveformIndices['E2'] if x[1] - x[0] > 600.]
+                    sustainedE2_durations   = [x[1] - x[0] for x in sustainedE2_locations]
+                    if len(sustainedE2_durations) == 0:
+                        params['s_sE2']         = 0
+                        params['n_sE2']         = 0
+                        params['a_sE2']         = 0
+                        params['m_sE2']         = 0
+                        params['t>1stsE2']      = 0
+   
+                    else:
+                        params['s_sE2']         = float(np.sum(sustainedE2_durations).astype(np.float32))
+                        params['n_sE2']         = len(sustainedE2_durations)
+                        params['a_sE2']         = float(np.mean(sustainedE2_durations).astype(np.float32))
+                        params['m_sE2']         = float(np.median(sustainedE2_durations).astype(np.float32))
+                        params['t>1stsE2']      = sustainedE2_locations[0][0] - probe_locations[0][0]
 
                         
                     # E12: phases with both E1 and E2
@@ -736,19 +739,19 @@ class EPGDataset:
                     E12_durations = [x[1] - x[0] for x in E12_locations]
                     # print(E12_locations)
                     if len(E12_durations) == 0:
-                        params['s_E12']   = 0 
+                        params['s_E12']     = 0 
                         params['n_E12']     = 0 
-                        params['a_E12']    = 0 
-                        params['m_E12']  = 0 
-                        params['mx_E12']     = 0        
-                        params['t>1stE12'] = 0  # Time from 1st probe to 1st E12        
+                        params['a_E12']     = 0 
+                        params['m_E12']     = 0 
+                        params['mx_E12']    = 0        
+                        params['t>1stE12']  = 0  # Time from 1st probe to 1st E12        
                     else:
-                        params['s_E12']   = float(np.sum(E12_durations).astype(np.float32))
+                        params['s_E12']     = float(np.sum(E12_durations).astype(np.float32))
                         params['n_E12']     = len(E12_durations)
-                        params['a_E12']    = float(np.mean(E12_durations).astype(np.float32))
-                        params['m_E12']  = float(np.median(E12_durations).astype(np.float32))
-                        params['mx_E12']     = float(np.max(E12_durations).astype(np.float32))
-                        params['t>1stE12'] = E12_locations[0][0] - probe_locations[0][0]
+                        params['a_E12']     = float(np.mean(E12_durations).astype(np.float32))
+                        params['m_E12']     = float(np.median(E12_durations).astype(np.float32))
+                        params['mx_E12']    = float(np.max(E12_durations).astype(np.float32))
+                        params['t>1stE12']  = E12_locations[0][0] - probe_locations[0][0]
                     # E1 followed by E2
                     E1followedE2_locations = get_stage(recAna, stage = 'E1followedE2')
                     E1followedE2_durations = [x[1] - x[0] for x in E1followedE2_locations]
@@ -756,58 +759,44 @@ class EPGDataset:
                         params['d_E1follwedbyE2']   = 0             
                     else:
                         params['d_E1follwedbyE2']   = float(np.mean(E1followedE2_durations).astype(np.float32))
-
                     # E1 followed by sustained E2
                     E1followedsE2_locations = get_stage(recAna, stage = 'E1followedsE2')
                     E1followedsE2_durations = [x[1] - x[0] for x in E1followedsE2_locations]
                     if len(E1followedsE2_durations) == 0:
-                        params['d_E1follwedbysE2']   = 0             
+                        params['d_E1follwedbysE2']  = 0             
                     else:
-                        params['d_E1follwedbysE2']   = float(np.mean(E1followedsE2_durations).astype(np.float32))
+                        params['d_E1follwedbysE2']  = float(np.mean(E1followedsE2_durations).astype(np.float32))
 
-                    firstE2                             = waveformIndices['E2'][0]
-                    probes2firstE2                      = [probe for probe in probe_locations if probe[1] < firstE2[0]]
-                    params['n_Pr>1stE2']      = len(probes2firstE2)
+                    firstE2                         = waveformIndices['E2'][0]
+                    probes2firstE2                  = [probe for probe in probe_locations if probe[1] < firstE2[0]]
+                    params['n_Pr>1stE2']            = len(probes2firstE2)
 
-                    firstsustainedE2                    = sustainedE2_locations[0]
-                    probes2firstsE2                     = [probe for probe in probe_locations if probe[1] < firstsustainedE2[0]]
-                    params['n_Pr>1stsE2']     = len(probes2firstsE2)
+                    firstsustainedE2                = sustainedE2_locations[0]
+                    probes2firstsE2                 = [probe for probe in probe_locations if probe[1] < firstsustainedE2[0]]
+                    params['n_Pr>1stsE2']           = len(probes2firstsE2)
 
-                    E2_2_firstsE2                       = [E2dur for E2dur in waveformIndices['E2'] if E2dur[1] < firstsustainedE2[0]]
-                    params['n_E2>1stsE2']         = len(E2_2_firstsE2)
+                    E2_2_firstsE2                   = [E2dur for E2dur in waveformIndices['E2'] if E2dur[1] < firstsustainedE2[0]]
+                    params['n_E2>1stsE2']           = len(E2_2_firstsE2)
 
-                    probesafterfirstsE2                 = [probe for probe in probe_locations if probe[0] > firstsustainedE2[1]]
-                    params['n_Pr.after.1stsE2']          = len(probesafterfirstsE2)   
+                    probesafterfirstsE2             = [probe for probe in probe_locations if probe[0] > firstsustainedE2[1]]
+                    params['n_Pr.after.1stsE2']     = len(probesafterfirstsE2)   
 
-                    if len(phloem_locations) == 0:
-                        params['a_E2_per_phloem'] = 0 
+                    if params['n_E12'] == 0:
+                        params['%_sE2']     = np.nan
+                        error_log.append('%_sE2 is NaN as n_E12 = 0')
                     else:
-                        params['a_E2_per_phloem'] = params['s_E2']/len(phloem_locations)
+                        if params['n_sE2'] == 0:
+                            params['%_sE2'] = 0
+                        else:
+                            params['%_sE2'] = params['s_E2'] / params['n_E12']
 
-                    # params['%E2s_in_E2']   = params['n_sE2'] / params['n_E2']
-                    try:
-                        params['%_sE2']     = params['s_E2'] / params['n_E12']
-                    except Exception as e:
-                        params['%_sE2']     = 0 
-                        error_log.append('%_sE2 ' + str(e))
-                        #print('E2_ratio ' + str(e))
-
-                    if 'C' in listWaveforms:
-                        params['t>1stE2'] = waveformIndices['E2'][0][0] - probe_locations[0][0]
-                    # print(params['n_E12'], len(phloem_locations))
-                    # print(params['n_sgE1'])
-                    # print(phloem_locations)
-                    # params['a_E2/E']    = params['s_E2'] / (params['n_E12']+params['n_sgE1'])
-                    params['%phloem_ph_fail']   = params['n_sgE1'] / (params['n_E12']+params['n_sgE1'])
-                    params['tPr>1stE2/1stPr'] = 0
-                    # s_probe_before_1stprobe_with_E = []
                     for prob_loc in probe_locations:
                         subAna = recAna[(recAna['time'] >= prob_loc[0]) & (recAna['time'] <= prob_loc[1])]
                         E2_loc = subAna[subAna['label'] == 5].index
                         if len(E2_loc) > 0:
                             params['tPr>1stE2/1stPr'] = float(subAna.loc[E2_loc[0], 'time']) - prob_loc[0]
                             break
-                    params['tPr>1stsE2/1stPr'] = 0
+                    
                     for prob_loc in probe_locations:
                         subAna = recAna[(recAna['time'] >= prob_loc[0]) & (recAna['time'] <= prob_loc[1])]
                         sE2_loc = [subAna[subAna['time'] == location[0]].index[0] for location in sustainedE2_locations
@@ -815,18 +804,17 @@ class EPGDataset:
                         if len(sE2_loc) > 0:
                             params['tPr>1stsE2/1stPr'] = float(subAna.loc[sE2_loc[0], 'time']) - prob_loc[0]
                             break                         
-                    params['E2_index'] = params['s_E2'] / (recTime*3600 - waveformIndices['E2'][0][0])
-                    # print(params['s_E2'], recTime*3600 - waveformIndices['E2'][0][0])
-                    firstphloem = phloem_locations[0]
-                    params['d_1st_E'] = firstphloem[1] - firstphloem[0]
+                    params['E2_index']          = params['s_E2'] / (recTime*3600 - waveformIndices['E2'][0][0])
+                    params['E1_index']          = np.round((params['s_E1'] / (params['s_E12'] + params['s_sgE1']))*100, 2)
+                    if params['n_E12'] == 0:
+                        params['frE1_ratio']    = np.nan
+                        error_log.append('frE1_ratio is NaN as n_E12 = 0' )
+                    else:
+                        params['frE1_ratio']    = params['n_frE1'] / params['n_E12']
+                    
+                    params['%phloem_ph_fail']   = np.round((params['n_sgE1'] / (params['n_E12'] + params['n_sgE1']))*100, 2)
+                    params['E2/C_ratio']        = np.round((params['s_E2'] / params['s_C'])*100, 2)
 
-                # params['s_E'] = params['s_E1'] + params['s_E2']
-
-                try:
-                    params['E2/C_ratio']        = params['s_E2'] / params['s_C']
-                except Exception as e:
-                    params['E2/C_ratio']        = 0 
-                    error_log.append('E2/C_ratio ' + str(e))
                 for key in params.keys():
                     params[key] = [params[key]]
                 params = pd.DataFrame(params)
@@ -875,10 +863,10 @@ class EPGDataset:
                     params_hour['waveforms'] = ', '.join(listWaveforms)
                     ############ NP #############
                     if 'NP' not in listWaveforms:
-                        params_hour['s_NP']  = 0 
-                        params_hour['n_NP']  = 0 
-                        params_hour['a_NP']  = 0   
-                        params_hour['m_NP']  = 0              
+                        params_hour['s_NP']  = None 
+                        params_hour['n_NP']  = None 
+                        params_hour['a_NP']  = None   
+                        params_hour['m_NP']  = None              
                     else:
                         NP_durations        = [x[1] - x[0] for x in waveformIndices['NP']]
                         params_hour['s_NP']  = float(np.sum(NP_durations).astype(np.float32))
@@ -889,10 +877,10 @@ class EPGDataset:
                     ############ C, pd #############
                     # Total duration of C, Number of C, Mean duration of C 
                     if 'C' not in listWaveforms:
-                        params_hour['s_C']  = 0 
-                        params_hour['n_C']    = 0 
-                        params_hour['a_C']   = 0   
-                        params_hour['m_C'] = 0              
+                        params_hour['s_C']  = None 
+                        params_hour['n_C']    = None 
+                        params_hour['a_C']   = None   
+                        params_hour['m_C'] = None              
                     else:
                         C_durations         = [x[1] - x[0] for x in waveformIndices['C']]
                         params_hour['s_C']   = float(np.sum(C_durations).astype(np.float32))
@@ -902,10 +890,10 @@ class EPGDataset:
 
                     # Number of pd, Mean duration of pd
                     if 'pd' not in listWaveforms:
-                        params_hour['s_pd']  = 0 
-                        params_hour['a_pd']   = 0 
-                        params_hour['n_pd']    = 0 
-                        params_hour['m_pd'] = 0 
+                        params_hour['s_pd']  = None 
+                        params_hour['a_pd']   = None 
+                        params_hour['n_pd']    = None 
+                        params_hour['m_pd'] = None 
 
                     else:
                         pd_durations        = [x[1] - x[0] for x in waveformIndices['pd']]
@@ -918,10 +906,10 @@ class EPGDataset:
                     # Total duration of F, Total duration of F during the 1st, 2nd, ..., 8th h, 
                     # Number of F, Number of F during the 1st, 2nd, ..., 8th h, Mean duration of F
                     if 'F' not in listWaveforms:
-                        params_hour['s_F']   = 0 
-                        params_hour['a_F']    = 0 
-                        params_hour['n_F']     = 0 
-                        params_hour['m_F']  = 0 
+                        params_hour['s_F']   = None 
+                        params_hour['a_F']    = None 
+                        params_hour['n_F']     = None 
+                        params_hour['m_F']  = None 
                     else:
                         F_durations         = [x[1] - x[0] for x in waveformIndices['F']]
                         params_hour['s_F']   = float(np.sum(F_durations).astype(np.float32))
@@ -932,10 +920,10 @@ class EPGDataset:
                     ################# G ################# 
                     # Total duration of G, Number of G, Mean duration of G
                     if 'G' not in listWaveforms:
-                        params_hour['s_G']   = 0 
-                        params_hour['a_G']    = 0 
-                        params_hour['n_G']     = 0 
-                        params_hour['m_G']  = 0 
+                        params_hour['s_G']   = None 
+                        params_hour['a_G']    = None 
+                        params_hour['n_G']     = None 
+                        params_hour['m_G']  = None 
                     else:
                         G_durations         = [x[1] - x[0] for x in waveformIndices['G']]
                         params_hour['s_G']   = float(np.sum(G_durations).astype(np.float32))
@@ -945,10 +933,10 @@ class EPGDataset:
 
                     ################# E, E1, E2 ################# 
                     if 'E1' not in listWaveforms:
-                        params_hour['s_E1']   = 0 
-                        params_hour['a_E1']    = 0 
-                        params_hour['n_E1']     = 0 
-                        params_hour['m_E1']  = 0                
+                        params_hour['s_E1']   = None 
+                        params_hour['a_E1']    = None 
+                        params_hour['n_E1']     = None 
+                        params_hour['m_E1']  = None                
                     else:
                         E1_durations        = [x[1] - x[0] for x in waveformIndices['E1']]
                         params_hour['s_E1']  = float(np.sum(E1_durations).astype(np.float32))
@@ -957,14 +945,14 @@ class EPGDataset:
                         params_hour['m_E1'] = float(np.median(E1_durations).astype(np.float32))
 
                     if 'E2' not in listWaveforms:
-                        params_hour['s_E2']   = 0 
-                        params_hour['a_E2']    = 0 
-                        params_hour['n_E2']     = 0 
-                        params_hour['m_E2']  = 0                        
-                        params_hour['s_sE2']   = 0 
-                        params_hour['a_sE2']    = 0 
-                        params_hour['n_sE2']     = 0 
-                        params_hour['m_sE2']  = 0                
+                        params_hour['s_E2']   = None 
+                        params_hour['a_E2']    = None 
+                        params_hour['n_E2']     = None 
+                        params_hour['m_E2']  = None                        
+                        params_hour['s_sE2']   = None 
+                        params_hour['a_sE2']    = None 
+                        params_hour['n_sE2']     = None 
+                        params_hour['m_sE2']  = None                
                     else:
                         E2_durations        = [x[1] - x[0] for x in waveformIndices['E2']]
                         params_hour['s_E2']  = float(np.sum(E2_durations).astype(np.float32))
@@ -1004,22 +992,38 @@ class EPGDataset:
                         for params, name in zip(recordingParams, sheet_names):
                             assert view in ['row', 'column'], "Params 'view' must be 'row' or 'column'."
                             if view == 'column':
+                                description = pd.DataFrame([variable_descriptions[x] for x in params.columns]).transpose()
+                                description.columns = params.columns
+                                description.index = ['Description']
+                                params = pd.concat([description, params])
                                 params = params.transpose()
-                                params['Description'] = 
+                                params.index.name = 'Variables'                                
                             params.to_excel(writer, sheet_name=name)
                     print(f'Exported to {os.getcwd()}/EPGParameters_{progress}.xlsx')
             else:
                 recordingParams = pd.concat(recordingParams)
+                assert view in ['row', 'column'], "Params 'view' must be 'row' or 'column'."
+                if view == 'column':
+                    description = pd.DataFrame([variable_descriptions[x] for x in recordingParams.columns]).transpose()
+                    description.columns = recordingParams.columns
+                    description.index = ['Description']
+                    recordingParams = pd.concat([description, recordingParams])
+                    recordingParams = recordingParams.transpose()
+                    recordingParams.index.name = 'Variables'
+ 
                 if export_xlsx == True:
-                    assert view in ['row', 'column'], "Params 'view' must be 'row' or 'column'."
-                    if view == 'column':
-                        recordingParams = recordingParams.transpose()
                     with pd.ExcelWriter(f'EPGParameters_{progress}.xlsx', engine='xlsxwriter') as writer:
                         recordingParams.to_excel(writer, sheet_name = progress)
                     print(f'Exported to {os.getcwd()}/EPGParameters_{progress}.xlsx')
         return recordingParams            
 
+    def assign_treatments(self, params, treatment_id = 0):
+        pass 
+    def statistical_analysis(self, by):
+        ''' Parameter "by" must be one of [None, treatment]'''
+        pass
     def make_boxplot(self, params):
+    
         pass 
 
     def datasetSummary(self):

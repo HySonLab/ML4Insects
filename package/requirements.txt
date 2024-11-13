@@ -16,3 +16,4 @@ pyts==0.13.0
 opencv-python
 PyWavelets
 tqdm
+xlsxwriter

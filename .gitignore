@@ -6,5 +6,4 @@ prediction/
 DiscoEPG.egg-info/
 log/
 /*.xlsx
-debug.ipynb
 Newmodeltraining.ipynb 

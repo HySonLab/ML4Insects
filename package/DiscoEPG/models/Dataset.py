@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd 
-from sklearn.preprocessing import MinMaxScaler
+from scipy import stats
 import warnings
 
 import os
@@ -22,7 +22,19 @@ class EPGDataset:
                 dataset_name = 'SA',
                 inference = False,
                 ):
-                
+        '''
+        A class providing various functionalities for EPG analysis, including 
+        making analysis, visualization and processing data for training ML models.
+        *NOTE: Argument 'inference' is a support argument for making automatic annotation
+        on external (unloaded) EPG recording. It is often not important when 
+        the user only wants to make analysis
+        ----------
+        Arguments
+        ----------
+            data_path:      directory of the database
+            dataset_name:   name of the dataset
+            inference:      set inference mode
+        '''        
         self.guidelines = [
                             'The recording is always started with NP',
                             'Np is always followed by C or last until the end',
@@ -47,6 +59,9 @@ class EPGDataset:
             # print(self.database_loaded)
             print('Inference mode, skip loading data.') 
     def load_database(self):
+        '''
+        Load the EPG database from the given directory.
+        '''
         self.guideline_check_log = {}
         # Reading database 
         if isinstance(self.dataset_name, str):
@@ -61,6 +76,7 @@ class EPGDataset:
                 self.guideline_check_log[recording_name] = self.check_guidelines(ana)[1]
                 self.recordings.append({'id': id,
                                         'name': recording_name,
+                                        'treatment' : None,
                                         'recording': recording,
                                         'ana':ana,
                                         'dataset': self.dataset_name,
@@ -87,6 +103,7 @@ class EPGDataset:
                     self.guideline_check_log[recording_name] = self.check_guidelines(ana)[1]
                     self.recordings.append({'id': id,
                                             'name': recording_name,
+                                            'treatment' : None,
                                             'recording': recording,
                                             'ana':ana,
                                             'dataset': set_name,
@@ -98,7 +115,8 @@ class EPGDataset:
                         if ana.iloc[-1,1] != len(recording)//100:
                             print(f'{recording_name} - Analysis ends at {ana.iloc[-1,1]} instead of {len(recording)/100}.')
                     
-                                            
+        self.name2id = {file['name']: file['id'] for file in self.recordings}
+        self.id2name = {file['id']: file['name'] for file in self.recordings}                                 
         print('Done! Elapsed: {:.2f} s'.format(time.perf_counter() - t))
         self.database_loaded = True 
         self.guideline_check_log = pd.DataFrame(self.guideline_check_log)
@@ -118,26 +136,38 @@ class EPGDataset:
         self.is_inference_mode = False
 
     def __getitem__(self, idx):
-        assert self.database_loaded == True, "Database is not loaded. Load with EPGDataset.loadRec()."
+        assert self.database_loaded == True, "Database is not loaded. Load with EPGDataset.load_database()."
         return self.recordings[idx]
 
     def loadRec(self, recName, data_path = None, dataset_name = None):
+        ''' 
+        For loading a single recording given its name. 
+        Helpful for loading external data for making inference.
+        Only need to provide 'data_path' and 'dataset_name' when reading external data.
+        ----------
+        Arguments
+        ----------
+            recName:        recording's name 
+            data_path:      directory of database
+            dataset_name:   name of the dataset
+        '''
         if data_path is not None or dataset_name is not None:
             assert self.is_inference_mode == True, 'Reading external data is only possible in inference mode. Run self.inference_mode() to switch to inference mode.'
         if self.is_inference_mode == True:
+            # For loading data from external source
             if data_path == None:
                 data_path = self.data_path
             if dataset_name == None:
                 dataset_name = self.dataset_name
             recording, ana = read_signal(recName, data_path=data_path, dataset_name = dataset_name)
-            recording = {'id': id,
-                        'name': recName,
+            recording = {'name': recName,
                         'recording': recording,
                         'ana':ana,
                         'dataset': self.dataset_name,
                         }
             return recording
         else:
+            # For loaded database
             if isinstance(recName, str):
                 idx = self.recNames.index(recName)
                 return self.__getitem__(idx)
@@ -148,7 +178,8 @@ class EPGDataset:
                     recs.append(self.__getitem__(idx))
                 return recs
 
-    def plot(self, idx, mode = 'static', 
+    def plot(self, idx, 
+            mode = 'static', 
             hour = None, 
             range = None, 
             width = None, 
@@ -156,6 +187,22 @@ class EPGDataset:
             timeunit = None, 
             nticks = None,
             smoothen = False):
+        '''
+        Making aesthetic plots of EPG recordings.
+
+        ----------
+        Arguments
+        ----------
+            idx:        recording's name (str) or index (int)
+            mode:       static or interactive
+            hour:       the specific hour to plot
+            range:      A 2-tuple (a, b) specifying the start and end of the interested period (unit: second)
+            width:      width of the plot (only applicable to static plot)
+            height:     height of the plot (only applicable to static plot)
+            timeunit:   unit of the x-axis (sec, min or hour)
+            nticks:     number of ticks for x-axis
+            smoothen:   for making less resource-consuming plot (only applicable to interactive plot)
+        '''
         if isinstance(idx, str):
             recData = self.loadRec(idx)
         elif isinstance(idx, int):
@@ -190,15 +237,16 @@ class EPGDataset:
                                     pad_and_slice = True, 
                                     verbose = True):
         '''
-            ----------
-            Arguments
-            ----------
-                config: configuration files containing necessary info
-                verbose: if True, print descriptions
-            --------
-            Return
-            --------
-                d: dictionaries of training/testing data with keys {'data', 'label'}
+        Creating data for training/ inference with ML models
+        ----------
+        Arguments
+        ----------
+            config: configuration files containing necessary info
+            verbose: if True, print descriptions
+        --------
+        Return
+        --------
+            d: dictionaries of training/testing data with keys {'data', 'label'}
         '''
         print('Generating sliding windows ...')
         count = 0
@@ -233,6 +281,13 @@ class EPGDataset:
         return self.windows, self.labels 
 
     def check_guidelines(self, ana):
+        '''
+        Check 11 guidelines
+        ----------
+        Arguments
+        ---------- 
+            ana: an ANA
+        '''
         if ana is None:
             check_text = ['No ANA.']*len(self.guidelines)
             check_log = ['No ANA.']*len(self.guidelines)
@@ -377,7 +432,18 @@ class EPGDataset:
                             view = 'row', 
                             export_xlsx = True,
                             separate_sheet = False):
-        
+        '''
+        Calculate various EPG parameters
+        ----------
+        Arguments
+        ----------
+            idx (list or int):  recording's name or idx
+            ana:                an ANA
+            progress:           overall, progressive or cumulative
+            view:               row or column
+            export_xlsx:        export to an Excel file
+            separate_sheet:     export parameters separately or not 
+        '''
         if idx == None:
             idx = [i for i in range(len(self.recordings))]
         else:
@@ -392,6 +458,7 @@ class EPGDataset:
             recData = self.recordings[recIndex]
             recDataset = recData['dataset']
             recName = recData['name']
+            recTreatment = recData['treatment']
             sheet_names.append(recName)
             recId = recData['id']
             recRecording = recData['recording']
@@ -410,6 +477,7 @@ class EPGDataset:
             params = {}
             params['name'] = recName
             params['dataset'] = recDataset
+            params['treatment'] = recTreatment
             params['recTime'] = recTime
             params['waveforms'] = ', '.join(listWaveforms)
             
@@ -980,7 +1048,7 @@ class EPGDataset:
                     progress_params.append(params_hour)
                 progress_params = pd.concat(progress_params)
                 recordingParams.append(progress_params)
-
+        self.recordingParams = pd.concat(recordingParams)
         ############## Aggregation #################
         if len(recordingParams) == 0:
             return 
@@ -1017,13 +1085,57 @@ class EPGDataset:
                     print(f'Exported to {os.getcwd()}/EPGParameters_{progress}.xlsx')
         return recordingParams            
 
-    def assign_treatments(self, params, treatment_id = 0):
-        pass 
-    def statistical_analysis(self, by):
+    def assign_treatments(self, recordings: list, treatment_id = 0):
+        '''
+        Assigning treatment ID to loaded recordings.
+        ----------
+        Arguments
+        ----------        
+            recordings: a list of recording
+            treatment_id: ID of the treatment group that you would like to assign
+        '''
+        assert self.database_loaded == True, "Database is not loaded. Load with EPGDataset.load_database()."
+        if not isinstance(recordings, list):
+            recordings = [recordings]
+        for file in recordings:
+            if isinstance(file, str):
+                idx = self.name2id[file]
+            else:
+                idx = file
+            assert self.recordings[idx]['id'] == idx, f'Index mismatch at {idx}'
+            self.recordings[idx]['treatment'] = treatment_id
+
+    def statistical_analysis(self, parameters, treatment_groups, type, *args):
         ''' Parameter "by" must be one of [None, treatment]'''
-        pass
-    def make_boxplot(self, params):
-    
+        assert not all(x is None for x in self.recordingParams['treatment']), 'No treatment was assigned.'
+        samples = []
+        for id in treatment_groups:
+            a = self.recordingParams[self.recordingParams['treatment'] == id]
+            a = a[parameters]
+            samples.append(a)
+        n_samples = len(treatment_groups)
+        # except:
+        #     raise RuntimeError('Please calculate the parameters first.')
+        if type == 'ttest':
+            assert n_samples == 2, f't-test only works for 2 samples, not {n_samples}.'
+            res = stats.ttest_ind(samples[0], samples[1], *args)
+            return res
+        elif type == 'wilcoxon':
+            assert n_samples == 2, f'Wilcoxon signed-rank test only works for 2 samples, not {n_samples}.'
+            res = stats.wilcoxon(samples[0], samples[1], *args)
+            return res        
+        elif type == 'ANOVA':
+            assert n_samples > 2, f'ANOVA only works for 3 or more samples, not {n_samples}.'
+            anova_res = stats.f_oneway(samples, *args)
+            tukeyhsd_res = stats.tukey_hsd(samples, *args)
+            return anova_res, tukeyhsd_res
+        elif type == 'kruskal':
+            assert n_samples > 2, f'kruskal-wallis test only works for 3 or more samples, not {n_samples}.'
+            res = stats.kruskal(samples, *args)
+            return res 
+
+    def make_boxplot(self, parameters, treatment_groups):
+        
         pass 
 
     def datasetSummary(self):
@@ -1161,6 +1273,7 @@ variable_descriptions = {
     'dataset': 'Name of the dataset',
     'recTime': 'Total recording time',
     'waveforms': 'Observed waveforms',
+    'treatment': 'Treatment group ID',
     ### Non-probing
     'n_NP': 'Number of NP periods',
     'a_NP': 'Average duration of NP periods',
@@ -1280,13 +1393,4 @@ variable_descriptions = {
     's_NP>1stE1': 'Sum of duration of NP before 1st E1',
     'a_initialE1': 'Average duration of initial E1',
     '%phloem_ph_fail': '% of phloem phases that fail to achieve ingestion',
-    # 's_E':,
-    
-
-    
-    
-    # 'a_E2/E':,
-    
-
-     
 }

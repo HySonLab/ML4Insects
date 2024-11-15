@@ -793,15 +793,32 @@ class EPGDataset:
                         params['a_sE2']         = 0
                         params['m_sE2']         = 0
                         params['t>1stsE2']      = 0
-   
+                        params['n_Pr>1stsE2'] = 0
+                        params['n_E2>1stsE2'] = 0
+                        params['n_Pr.after.1stsE2'] = 0 
+                        params['tPr>1stsE2/1stPr'] = 0   
                     else:
                         params['s_sE2']         = float(np.sum(sustainedE2_durations).astype(np.float32))
                         params['n_sE2']         = len(sustainedE2_durations)
                         params['a_sE2']         = float(np.mean(sustainedE2_durations).astype(np.float32))
                         params['m_sE2']         = float(np.median(sustainedE2_durations).astype(np.float32))
                         params['t>1stsE2']      = sustainedE2_locations[0][0] - probe_locations[0][0]
+                        firstsustainedE2                = sustainedE2_locations[0]
+                        probes2firstsE2                 = [probe for probe in probe_locations if probe[1] < firstsustainedE2[0]]
+                        params['n_Pr>1stsE2']           = len(probes2firstsE2)
 
-                        
+                        E2_2_firstsE2                   = [E2dur for E2dur in waveformIndices['E2'] if E2dur[1] < firstsustainedE2[0]]
+                        params['n_E2>1stsE2']           = len(E2_2_firstsE2)
+
+                        probesafterfirstsE2             = [probe for probe in probe_locations if probe[0] > firstsustainedE2[1]]
+                        params['n_Pr.after.1stsE2']     = len(probesafterfirstsE2)   
+                        for prob_loc in probe_locations:
+                            subAna = recAna[(recAna['time'] >= prob_loc[0]) & (recAna['time'] <= prob_loc[1])]
+                            sE2_loc = [subAna[subAna['time'] == location[0]].index[0] for location in sustainedE2_locations
+                                                    if len(subAna[subAna['time'] == location[0]]) > 0]
+                            if len(sE2_loc) > 0:
+                                params['tPr>1stsE2/1stPr'] = float(subAna.loc[sE2_loc[0], 'time']) - prob_loc[0]
+                                break                                
                     # E12: phases with both E1 and E2
                     E12_locations = get_stage(recAna, stage = 'E12')
                     E12_durations = [x[1] - x[0] for x in E12_locations]
@@ -820,6 +837,7 @@ class EPGDataset:
                         params['m_E12']     = float(np.median(E12_durations).astype(np.float32))
                         params['mx_E12']    = float(np.max(E12_durations).astype(np.float32))
                         params['t>1stE12']  = E12_locations[0][0] - probe_locations[0][0]
+
                     # E1 followed by E2
                     E1followedE2_locations = get_stage(recAna, stage = 'E1followedE2')
                     E1followedE2_durations = [x[1] - x[0] for x in E1followedE2_locations]
@@ -839,15 +857,7 @@ class EPGDataset:
                     probes2firstE2                  = [probe for probe in probe_locations if probe[1] < firstE2[0]]
                     params['n_Pr>1stE2']            = len(probes2firstE2)
 
-                    firstsustainedE2                = sustainedE2_locations[0]
-                    probes2firstsE2                 = [probe for probe in probe_locations if probe[1] < firstsustainedE2[0]]
-                    params['n_Pr>1stsE2']           = len(probes2firstsE2)
 
-                    E2_2_firstsE2                   = [E2dur for E2dur in waveformIndices['E2'] if E2dur[1] < firstsustainedE2[0]]
-                    params['n_E2>1stsE2']           = len(E2_2_firstsE2)
-
-                    probesafterfirstsE2             = [probe for probe in probe_locations if probe[0] > firstsustainedE2[1]]
-                    params['n_Pr.after.1stsE2']     = len(probesafterfirstsE2)   
 
                     if params['n_E12'] == 0:
                         params['%_sE2']     = np.nan
@@ -864,14 +874,7 @@ class EPGDataset:
                         if len(E2_loc) > 0:
                             params['tPr>1stE2/1stPr'] = float(subAna.loc[E2_loc[0], 'time']) - prob_loc[0]
                             break
-                    
-                    for prob_loc in probe_locations:
-                        subAna = recAna[(recAna['time'] >= prob_loc[0]) & (recAna['time'] <= prob_loc[1])]
-                        sE2_loc = [subAna[subAna['time'] == location[0]].index[0] for location in sustainedE2_locations
-                                                if len(subAna[subAna['time'] == location[0]]) > 0]
-                        if len(sE2_loc) > 0:
-                            params['tPr>1stsE2/1stPr'] = float(subAna.loc[sE2_loc[0], 'time']) - prob_loc[0]
-                            break                         
+                                     
                     params['E2_index']          = params['s_E2'] / (recTime*3600 - waveformIndices['E2'][0][0])
                     params['E1_index']          = np.round((params['s_E1'] / (params['s_E12'] + params['s_sgE1']))*100, 2)
                     if params['n_E12'] == 0:
@@ -1105,8 +1108,15 @@ class EPGDataset:
             assert self.recordings[idx]['id'] == idx, f'Index mismatch at {idx}'
             self.recordings[idx]['treatment'] = treatment_id
 
-    def statistical_analysis(self, parameters, treatment_groups, type, *args):
-        ''' Parameter "by" must be one of [None, treatment]'''
+    def statistical_analysis(self, parameters, treatment_groups, test, *args):
+        ''' 
+        perform statistical analysis
+        ----------
+        Arguments
+        ----------   
+            parameters: which parameter to perform statistical analysis
+            ...        
+        '''
         assert not all(x is None for x in self.recordingParams['treatment']), 'No treatment was assigned.'
         samples = []
         for id in treatment_groups:
@@ -1116,28 +1126,66 @@ class EPGDataset:
         n_samples = len(treatment_groups)
         # except:
         #     raise RuntimeError('Please calculate the parameters first.')
-        if type == 'ttest':
-            assert n_samples == 2, f't-test only works for 2 samples, not {n_samples}.'
-            res = stats.ttest_ind(samples[0], samples[1], *args)
-            return res
-        elif type == 'wilcoxon':
-            assert n_samples == 2, f'Wilcoxon signed-rank test only works for 2 samples, not {n_samples}.'
-            res = stats.wilcoxon(samples[0], samples[1], *args)
-            return res        
-        elif type == 'ANOVA':
-            assert n_samples > 2, f'ANOVA only works for 3 or more samples, not {n_samples}.'
-            anova_res = stats.f_oneway(samples, *args)
-            tukeyhsd_res = stats.tukey_hsd(samples, *args)
-            return anova_res, tukeyhsd_res
-        elif type == 'kruskal':
-            assert n_samples > 2, f'kruskal-wallis test only works for 3 or more samples, not {n_samples}.'
-            res = stats.kruskal(samples, *args)
-            return res 
+        result = {}
+        if not isinstance(test, list):
+            test = [test]
+        for type in test:
+            if type == 'ttest':
+                assert n_samples == 2, f't-test only works for 2 samples, not {n_samples}.'
+                res = stats.ttest_ind(samples[0], samples[1], *args)
+                
+            elif type == 'wilcoxon':
+                assert n_samples == 2, f'Wilcoxon signed-rank test only works for 2 samples, not {n_samples}.'
+                res = stats.wilcoxon(samples[0], samples[1], *args)
+                    
+            elif type == 'ANOVA':
+                assert n_samples > 2, f'ANOVA only works for 3 or more samples, not {n_samples}.'
+                anova_res = stats.f_oneway(samples, *args)
+                tukeyhsd_res = stats.tukey_hsd(samples, *args)
+                res = [anova_res, tukeyhsd_res]
+            elif type == 'kruskal':
+                assert n_samples > 2, f'kruskal-wallis test only works for 3 or more samples, not {n_samples}.'
+                res = stats.kruskal(samples, *args)
+            result[type] = res    
+        return result
 
-    def make_boxplot(self, parameters, treatment_groups):
-        
-        pass 
+    def make_boxplot(self, parameters, treatment_groups, figsize = (6,6), max_ncol = 4):
+        assert not all(x is None for x in self.recordingParams['treatment']), 'No treatment was assigned.'
+        if not isinstance(parameters, list):
+            parameters = [parameters]
+        samples = {}
+        for id in treatment_groups:
+            a = self.recordingParams[self.recordingParams['treatment'] == id]
+            a = a[parameters]
+            samples[id] = a
+        if len(parameters) > max_ncol:
+            ncol = max_ncol
+            nrow = (len(parameters)//max_ncol) + 1
+        else:
+            ncol = len(parameters) 
+            nrow = 1
+        f, ax = plt.subplots(nrow, ncol, figsize = figsize)
 
+        for i, param in enumerate(parameters):
+            df = []
+            for id in treatment_groups:
+                tmp = samples[id][[param]]
+                tmp.index = [i for i in range(len(tmp))]
+                df.append(tmp)
+            df = pd.concat(df, axis=1, ignore_index=True)
+            df.columns = treatment_groups
+            if nrow == 1:
+                df.plot(kind='box', title=param, showmeans=True, ax=ax[i])
+                ax[i].grid('on')
+                ax[i].set_xticks(np.arange(1, len(df.columns)+1), [f'Group#{x}' for x in treatment_groups])
+            else:
+                df.plot(kind='box', title=param, showmeans=True, ax=ax[i//ncol, i%ncol])
+                ax[i//ncol, i%ncol].grid('on')
+                ax[i//ncol, i%ncol].set_xticks(np.arange(1, len(df.columns)+1),[f'Group#{x}' for x in treatment_groups])
+        for j in range(i+1, nrow*ncol):
+            f.delaxes(ax[j//ncol, j%ncol])
+        plt.tight_layout()
+        plt.show()
     def datasetSummary(self):
 
         durations = {'NP': [], 'C': [], 'E1': [], 'E2': [], 'F': [], 'G': [], 'pd': []}

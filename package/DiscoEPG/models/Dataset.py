@@ -48,7 +48,10 @@ class EPGDataset:
                             'E1 is always followed by E1e, E2, C, or Np',
                             'The end of each recording must be marked (T, code 99)',
                             ]       
-
+        self.waveform_labeltoid = {1: 0, 2: 1, 4: 2, 5: 3, 6: 4, 7: 5, 8: 6}
+        self.waveform_idtolabel = {0: 1, 1: 2, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8}
+        self.waveform_nametolabel = {'NP':1, 'C':2, 'E1':4, 'E2':5, 'F':6, 'G':7, 'pd':8}
+        self.waveform_labeltoname = {1:'NP', 2:'C', 4:'E1', 5:'E2', 6:'F', 7:'G', 8:'pd'}
         self.data_path = data_path
         self.dataset_name = dataset_name
         self.is_inference_mode = inference
@@ -115,8 +118,8 @@ class EPGDataset:
                         if ana.iloc[-1,1] != len(recording)//100:
                             print(f'{recording_name} - Analysis ends at {ana.iloc[-1,1]} instead of {len(recording)/100}.')
                     
-        self.name2id = {file['name']: file['id'] for file in self.recordings}
-        self.id2name = {file['id']: file['name'] for file in self.recordings}                                 
+        self.recording_name2id = {file['name']: file['id'] for file in self.recordings}
+        self.recording_id2name = {file['id']: file['name'] for file in self.recordings}                                 
         print('Done! Elapsed: {:.2f} s'.format(time.perf_counter() - t))
         self.database_loaded = True 
         self.guideline_check_log = pd.DataFrame(self.guideline_check_log)
@@ -234,7 +237,7 @@ class EPGDataset:
                                     method= 'raw', 
                                     outlier_filter: bool = False, 
                                     scale: bool = True, 
-                                    pad_and_slice = True, 
+                                    enrich = True, 
                                     verbose = True):
         '''
         Creating data for training/ inference with ML models
@@ -255,10 +258,15 @@ class EPGDataset:
         for rec in tqdm(self.recordings):
             recRecording = rec['recording']
             recAna = rec['ana']
-            features, labels = generate_sliding_windows_single(recRecording, recAna, window_size, hop_length, 
-                                                                method, outlier_filter, scale, True, 'train')
-            d.append(features); l.append(labels)
-            count+=1
+
+            if recAna is None:
+                print(f'{rec["name"]} has no analysis file.')
+                continue
+            else:
+                features, labels = generate_sliding_windows_single(recRecording, recAna, window_size, hop_length, 
+                                                                method, outlier_filter, scale, enrich, 'train')
+                d.append(features); l.append(labels)
+                count+=1
 
         d = np.concatenate([f for f in d])
         l = np.concatenate([lab for lab in l])
@@ -266,7 +274,7 @@ class EPGDataset:
         d = format_data(d, l)
 
         if verbose == True:
-            print(f'Total: {count} recordings')
+            print(f'Processed {count}/{len(self.recordings)} recordings.')
             print(f'Signal processing method: {method} | Scale: {str(scale)}')
             cl, c = np.unique(l, return_counts=True)
             print('Class distribution (label:ratio): '+ ', '.join(f'{cl[i]}: {round(c[i]/len(l),2)}' for i in range(len(cl))))
@@ -276,8 +284,7 @@ class EPGDataset:
         self.waveforms, self.distributions = np.unique(self.labels, return_counts= True)
         n = len(self.waveforms)
         self.distributions = [round(self.distributions[i]/len(self.labels),2) for i in range(n)]
-        self.label_to_id = {1: 0, 2: 1, 4: 2, 5: 3, 6: 4, 7: 5, 8: 6}
-        self.name_to_label = {'NP':1, 'C':2, 'E1':4, 'E2':5, 'F':6, 'G':7, 'pd':8}
+
         return self.windows, self.labels 
 
     def check_guidelines(self, ana):
@@ -299,7 +306,7 @@ class EPGDataset:
             check[0] = True
             check_log[0] = 'True.'
         else:
-            check_log[0] = 'Recording does not start with NP'
+            check_log[0] = f'Starts with {self.waveform_labeltoname[ana.iloc[0,0]]} instead of NP.'
         # 2. Np is always followed by C or last until the end
         NP_idx = ana.index[ana['label'] == 1]
         next_idx = NP_idx + 1
@@ -335,9 +342,13 @@ class EPGDataset:
                 if ana.loc[idx+1, 'label'] != 2 and ana.loc[idx+1, 'label'] != 1:
                     not_follw_by_C_or_NP.append(idx)
         invalid_idx = not_prev_by_C + not_follw_by_C_or_NP
+        text = ''
         if len(invalid_idx) != 0:
-            check_log[3] = f'At line {str(not_prev_by_C)[1:-1]}, pd is not preceeded by C.' +\
-                            f'At line {str(not_follw_by_C_or_NP)[1:-1]}, pd is not followed by C or NP.'
+            if len(not_prev_by_C) != 0:
+                text += f'At line {str(not_prev_by_C)[1:-1]}, pd is not preceeded by C. '
+            if len(not_follw_by_C_or_NP) != 0:
+                text += f'At line {str(not_follw_by_C_or_NP)[1:-1]}, pd is not followed by C or NP.'
+            check_log[3] = text
         else:
             check[3] = True
             check_log[3] = 'True.'
@@ -375,7 +386,7 @@ class EPGDataset:
             check[6] = True    
             check_log[6] = 'True. F is not presented.'
         # 8. F is always preceded by C and 9. F is always followed by Np or C
-        G_idx = ana.index[ana['label'] == 6]
+        G_idx = ana.index[ana['label'] == 7]
         if len(G_idx) > 0:
             not_prev_by_C = []
             not_follw_by_C_or_NP = []
@@ -1102,7 +1113,7 @@ class EPGDataset:
             recordings = [recordings]
         for file in recordings:
             if isinstance(file, str):
-                idx = self.name2id[file]
+                idx = self.recording_name2id[file]
             else:
                 idx = file
             assert self.recordings[idx]['id'] == idx, f'Index mismatch at {idx}'

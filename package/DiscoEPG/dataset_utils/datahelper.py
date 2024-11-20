@@ -70,9 +70,9 @@ def read_signal(filename: str, data_path = '../data', dataset_name = None) -> tu
         if (ana['time'].iloc[-1]) != (data.shape[0]/100.):
             len_ana = (ana['time'].iloc[-1])
             len_data = (data.shape[0]/100.)
-            print("{} - Segmentation is given up to {:.2f} while the recoring's length is {:.2f}.".format(filename, len_ana, len_data))
+            print("{} - Analysis is given up to {:.2f} while the recoring's length is {:.2f}.".format(filename, len_ana, len_data))
     else:
-        print(f'{filename} - No annotation (*.ANA) was found.')
+        print(f'{filename} - No analysis (*.ANA) was found.')
         ana = None 
     return data, ana
 

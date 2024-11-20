@@ -5,7 +5,7 @@ import cv2
 import pywt 
 from ..utils.PyTorchWavelets.wavelets_pytorch.transform import WaveletTransformTorch
 from .datahelper import create_map, ana_labels, encoded_labels
-# from utils.augmentation import quantile_filter
+from utils.augmentation import quantile_filter
 from sklearn.preprocessing import MinMaxScaler
 from copy import deepcopy as dc
 
@@ -16,7 +16,8 @@ def generate_sliding_windows_single(   recording,
                                         method= 'raw', 
                                         outlier_filter: bool = False, 
                                         scale: bool = True, 
-                                        pad_and_slice = True, task = 'train'):
+                                        enrich = True, 
+                                        task = 'train'):
     '''
         ----------
         Arguments
@@ -26,7 +27,7 @@ def generate_sliding_windows_single(   recording,
             window_size: length of the sliding window
             hop_length: sliding length
             method: signal processing method. Must be one of 'raw', 'fft' or 'spec_img'.
-            pad_and_slice: when waveform is shorter than window size, pad the window to 2*window_size and adjust shorter hop length
+            enrich: when waveform is shorter than window size, pad the window to window_size length and adjust shorter hop length
         --------
         Return
         --------
@@ -61,8 +62,8 @@ def generate_sliding_windows_single(   recording,
                 pass
 
             else:#if shorter than window_size, => pad and slice
-                if pad_and_slice == True:
-                    start, end = (start+end)//2 - window_size, (start+end)//2 + window_size
+                if enrich == True:
+                    start, end = (start+end)//2 - window_size//2, (start+end)//2 + window_size//2
                     hop_length = 128
                 else: 
                     start, end = (start+end)//2 - window_size//2, (start+end)//2 + window_size//2

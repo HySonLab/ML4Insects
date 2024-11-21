@@ -5,7 +5,7 @@ import cv2
 import pywt 
 from ..utils.PyTorchWavelets.wavelets_pytorch.transform import WaveletTransformTorch
 from .datahelper import create_map, ana_labels, encoded_labels
-from utils.augmentation import quantile_filter
+from ..utils.augmentation import quantile_filter
 from sklearn.preprocessing import MinMaxScaler
 from copy import deepcopy as dc
 

@@ -54,6 +54,8 @@ class EPGDataset:
         self.waveform_labeltoname = {1:'NP', 2:'C', 4:'E1', 5:'E2', 6:'F', 7:'G', 8:'pd'}
         self.data_path = data_path
         self.dataset_name = dataset_name
+        if isinstance(self.dataset_name, str):
+            self.dataset_name = [self.dataset_name]
         self.is_inference_mode = inference
         if inference == False:
             self.load_database()
@@ -67,57 +69,33 @@ class EPGDataset:
         '''
         self.guideline_check_log = {}
         # Reading database 
-        if isinstance(self.dataset_name, str):
-            self.recNames = os.listdir(f'{self.data_path}/{self.dataset_name}')
-            # print(f'{self.data_path}/{self.dataset_name}')
-            self.recNames = sorted(set([x[:-4] for x in self.recNames]))
-            t = time.perf_counter()
-            self.recordings = []
-            print('Loading data ...')
-            for id, recording_name in enumerate(tqdm(self.recNames, desc = self.dataset_name)):
-                recording, ana = read_signal(recording_name, data_path=self.data_path, dataset_name = self.dataset_name)
+
+        print(f'Found {len(self.dataset_name)} datasets: {str(self.dataset_name)[1:-1]}.')
+        self.recNames = []
+        self.recordings = []
+        t = time.perf_counter()
+        print('Loading data ...')
+        for set_name in self.dataset_name:
+            filenames = os.listdir(f'{self.data_path}/{set_name}')
+            filenames = sorted(set([x[:-4] for x in filenames]))
+            self.recNames += list(filenames)
+            for id, recording_name in enumerate(tqdm(filenames, desc = set_name)):
+                recording, ana = read_signal(recording_name, data_path=self.data_path, dataset_name = set_name)
                 self.guideline_check_log[recording_name] = self.check_guidelines(ana)[1]
                 self.recordings.append({'id': id,
                                         'name': recording_name,
                                         'treatment' : None,
                                         'recording': recording,
                                         'ana':ana,
-                                        'dataset': self.dataset_name,
-                                        })
+                                        'dataset': set_name,
+                                        })        
                 # Check if time marks is correctly given
-                if ana.iloc[0,1] != 0:
-                    print(f'{recording_name} - Analysis starts at {ana.iloc[0,1]} instead of 0.')
-                if ana.iloc[-1,1] != len(recording)//100:
-                    print(f'{recording_name} - Analysis ends at {ana.iloc[-1,1]} instead of {len(recording)/100}.')
-            
-                                                        
-        elif isinstance(self.dataset_name, list):
-            print(f'Found {len(self.dataset_name)} datasets: {str(self.dataset_name)[1:-1]}.')
-            self.recNames = []
-            self.recordings = []
-            t = time.perf_counter()
-            print('Loading data ...')
-            for set_name in self.dataset_name:
-                filenames = os.listdir(f'{self.data_path}/{set_name}')
-                filenames = sorted(set([x[:-4] for x in filenames]))
-                self.recNames += list(filenames)
-                for id, recording_name in enumerate(tqdm(filenames, desc = set_name)):
-                    recording, ana = read_signal(recording_name, data_path=self.data_path, dataset_name = set_name)
-                    self.guideline_check_log[recording_name] = self.check_guidelines(ana)[1]
-                    self.recordings.append({'id': id,
-                                            'name': recording_name,
-                                            'treatment' : None,
-                                            'recording': recording,
-                                            'ana':ana,
-                                            'dataset': set_name,
-                                            })        
-                    # Check if time marks is correctly given
-                    if ana is not None:
-                        if ana.iloc[0,1] != 0:
-                            print(f'{recording_name} - Analysis starts at {ana.iloc[0,1]} instead of 0.')
-                        if ana.iloc[-1,1] != len(recording)//100:
-                            print(f'{recording_name} - Analysis ends at {ana.iloc[-1,1]} instead of {len(recording)/100}.')
-                    
+                if ana is not None:
+                    if ana.iloc[0,1] != 0:
+                        print(f'{recording_name} - Analysis starts at {ana.iloc[0,1]} instead of 0.')
+                    if ana.iloc[-1,1] != len(recording)//100:
+                        print(f'{recording_name} - Analysis ends at {ana.iloc[-1,1]} instead of {len(recording)/100}.')
+                
         self.recording_name2id = {file['name']: file['id'] for file in self.recordings}
         self.recording_id2name = {file['id']: file['name'] for file in self.recordings}                                 
         print('Done! Elapsed: {:.2f} s'.format(time.perf_counter() - t))
@@ -161,7 +139,7 @@ class EPGDataset:
             if data_path == None:
                 data_path = self.data_path
             if dataset_name == None:
-                dataset_name = self.dataset_name
+                dataset_name = self.dataset_name[0]
             recording, ana = read_signal(recName, data_path=data_path, dataset_name = dataset_name)
             recording = {'name': recName,
                         'recording': recording,

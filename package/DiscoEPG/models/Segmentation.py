@@ -192,8 +192,8 @@ class EPGSegment:
             self.train_result_['test_score'] = scores
             self.train_result_['test_confusion_matrix'] = c
             test_label = set(true_label)
-            id_to_label = {v: k for k, v in self.dataset.label_to_id.items()}
-            label_to_name = {v: k for k, v in self.dataset.name_to_label.items()}
+            id_to_label = {v: k for k, v in self.dataset.waveform_labeltoid.items()}
+            label_to_name = {v: k for k, v in self.dataset.waveform_nametolabel.items()}
             self.train_result_['test_class_accuracy'] = {label_to_name[id_to_label[id]]: np.round(c[i,i]*100,2) for i,id in enumerate(test_label)}
             self.pred_windows = pred_windows
             if verbose == True:

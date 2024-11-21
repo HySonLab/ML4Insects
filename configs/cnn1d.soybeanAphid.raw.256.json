@@ -1,5 +1,5 @@
-{"exp_name": "Soybean_Aphid", 
-"dataset_name": "soybeanAphid", 
+{"exp_name": "SBA-Rag5", 
+"dataset_name": "SBA-Rag5", 
 "window_size": 1024, 
 "hop_length": 1024, 
 "arch": "cnn1d", 

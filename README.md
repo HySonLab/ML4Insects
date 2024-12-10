@@ -112,7 +112,7 @@ We hugely thanks the authors of the cited work for providing us with necessary t
 
 ## 🧑‍🔬 Contributors
 * Quang-Dung DINH, Institut Galilée, Universite Sorbonne Paris Nord, Villetaneuse 93430, Paris, France
-* Dr. Truong Son HY (PI), Department of Computer Science, University of Alabama at Birmingham, United States
+* Dr. Truong Son HY (PI), Department of Computer Science, University of Alabama at Birmingham, Birmingham, AL 35294, United States
 * Dr. Phuong DAO (PI), Department of Agricultural Biology, Colorado State University, Fort Collins, CO 80523, United States
 
 ## 📖 References

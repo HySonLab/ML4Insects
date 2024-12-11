@@ -44,17 +44,16 @@ def visualize_signal(recording, ana_file, hour = None, range = None, ax = None, 
     ana = dc(ana_file)
     ana['time'] = ana['time'].apply(lambda x: x*sr)
     ana['time'] = ana['time'].astype(int)
-    
-    assert isinstance(hour, int) or hour is None, "Param 'hour' must be int."
-    assert isinstance(range, list) or isinstance(range, tuple) or range is None, "Param 'range' must be a list or tuple of length 2."
     if hour is not None or range is not None:
-        if isinstance(hour, int): # TO MAKE HOURLY PLOT
+        if hour is not None: # TO MAKE HOURLY PLOT
+            assert isinstance(hour, int), "Param 'hour' must be int."
             assert range is None, 'Can plot either by hour or specified range.'
             start, end = hour*360000, (hour+1)*360000
-        elif isinstance(range, list)  or isinstance(range, tuple):
+        elif range is not None:
+            assert (isinstance(range, list) or isinstance(range, tuple)), "Param 'range' must be a list or tuple of length 2."
             assert hour is None, 'Can plot either by hour or specified range.'
             assert len(range) == 2, 'Range must consider only start and end location.'
-            assert range[0] < range[1], 'Start must be smaller than end'
+            assert range[0] < range[1], 'Start time must be smaller than end time.'
             start, end = range
             start = int(start*100)
             end = int(end*100)
@@ -63,13 +62,9 @@ def visualize_signal(recording, ana_file, hour = None, range = None, ax = None, 
         tmp = ana[ana['time'] >= start]
         tmp = tmp[tmp['time'] < end]
         if len(tmp) == 0: # No data, match the data from the closest previous location
-            prev_row_idx = ana.index[ana['time'] >= start] - 1
-            prev_row = ana.loc[prev_row_idx]
-            start_row = dc(prev_row)
-            start_row['time'] = start
-            end_row = dc(prev_row)
-            end_row['time'] = end
-            tmp = pd.concat([start_row, end_row], axis = 0)
+            prev_row_idx  = ana[ana['time'] >= start].index[0] - 1
+            prev_label = ana.loc[prev_row_idx, 'label']
+            tmp = pd.DataFrame({'label': [prev_label, prev_label], 'time': (start, end)})
         else: # PAD DATA TO GET THE FULL LENGTH
             if tmp.iloc[0]['time'] != start: # PAD HEAD
                 prev_row_idx = tmp.index[0] - 1
@@ -82,7 +77,7 @@ def visualize_signal(recording, ana_file, hour = None, range = None, ax = None, 
                 tmp = pd.concat([tmp, last_row], axis = 0)
         tmp.reset_index(inplace = True, drop = True)
         ana = tmp
-        # print(ana)
+    # print(ana)
     waveform_indices = get_index(ana)
 
     custom_legends = []
@@ -104,7 +99,7 @@ def visualize_signal(recording, ana_file, hour = None, range = None, ax = None, 
     
     xlim_min = ana['time'].min()//100
     xlim_max = ana['time'].max()//100
-    scale = (xlim_max - xlim_min)//nticks
+    scale = max((xlim_max - xlim_min)//nticks, 1)
     xlim = np.arange(xlim_min, xlim_max+1, scale)
     ax.legend(custom_legends, waveform_indices.keys(), loc = 'upper right', ncols=len(custom_legends), fontsize = 15)
     if timeunit == 'sec':
@@ -359,12 +354,11 @@ def plot_gt_vs_pred_segmentation(recording, gt_ana, pred_ana = None, hour = None
     elif which == 'pred_vs_gt':
         assert pred_ana is not None, 'Must input prediction analysis'
 
-        f, ax = plt.subplots(2, 1, figsize=(16,5))
+        f, ax = plt.subplots(2, 1, figsize=(16,5), sharex= True)
         
         visualize_signal(recording, gt_ana, ax=ax[0], hour = hour, range = range)
         ax[0].text(0.85, 0.1, 'Ground-truth', horizontalalignment='center', verticalalignment='center', transform=ax[0].transAxes)
         ax[0].set_xlabel('')
-        ax[0].set_xticks([])
         ax[0].set_title(name)
         visualize_signal(recording, pred_ana, ax = ax[1], hour = hour, range = range)
         ax[1].text(0.85, 0.1, 'Predicted', horizontalalignment='center', verticalalignment='center', transform=ax[1].transAxes)

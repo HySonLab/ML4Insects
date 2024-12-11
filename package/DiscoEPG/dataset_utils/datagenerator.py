@@ -136,14 +136,23 @@ def extract_features(windows, method, window_size):
         features = np.stack([np.stack([a3[i],d3[i],d2[i],d1[i]]) for i in range(a3.shape[0])])
 
     elif method == 'scalogram':
-        torch_wt = WaveletTransformTorch(0.01, 9/64, cuda = True)
-        features = np.abs(torch_wt.cwt(windows))
-        resized = []
-        for i in range(features.shape[0]):
-            im = features[i]
-            resized_scalogram = cv2.resize(im, (im.shape[0], im.shape[0]), interpolation = cv2.INTER_LINEAR)
-            resized.append(resized_scalogram)
-        features = np.stack(resized)
+        # torch_wt = WaveletTransformTorch(0.01, 9/64, cuda = True)
+        # features = np.abs(torch_wt.cwt(windows))
+        # resized = []
+        # for i in range(features.shape[0]):
+        #     im = features[i]
+        #     resized_scalogram = cv2.resize(im, (im.shape[0], im.shape[0]), interpolation = cv2.INTER_LINEAR)
+        #     resized.append(resized_scalogram)
+        # breakpoint()
+        # features = np.stack(resized)
+        time = np.linspace(0, 1, len(windows))
+        sampling_period = np.diff(time).mean()
+        widths = np.geomspace(1, 200, num=64)
+        wavelet = "morl"
+        scalogram, _ = pywt.cwt(windows, widths, wavelet, sampling_period=sampling_period)
+        scalogram = np.abs(scalogram)
+        features = cv2.resize(scalogram, (scalogram.shape[0], scalogram.shape[0]), interpolation = cv2.INTER_LINEAR)
+
     else:
         raise RuntimeError ("Param 'method' should be one of 'fft',  'spectrogram' or 'raw'.")
     return features

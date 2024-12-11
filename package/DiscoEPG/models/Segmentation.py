@@ -46,7 +46,7 @@ def get_model(config):
         elif config.method == 'spectrogram':
             input_size = 65
         elif config.method == 'scalogram':
-            input_size = 65
+            input_size = 64
         return CNN2D(input_size = input_size)
 
 class EPGSegment:

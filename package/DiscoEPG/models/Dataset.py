@@ -31,9 +31,9 @@ class EPGDataset:
         ----------
         Arguments
         ----------
-            data_path:      directory of the database
-            dataset_name:   name of the dataset
-            inference:      set inference mode
+            + data_path:      directory of the database
+            + dataset_name:   name of the dataset
+            + inference:      set inference mode
         '''        
         self.guidelines = [
                             'The recording is always started with NP',
@@ -128,9 +128,9 @@ class EPGDataset:
         ----------
         Arguments
         ----------
-            recName:        recording's name 
-            data_path:      directory of database
-            dataset_name:   name of the dataset
+            + recName:        recording's name 
+            + data_path:      directory of database
+            + dataset_name:   name of the dataset
         '''
         if data_path is not None or dataset_name is not None:
             assert self.is_inference_mode == True, 'Reading external data is only possible in inference mode. Run self.inference_mode() to switch to inference mode.'
@@ -165,6 +165,7 @@ class EPGDataset:
             range = None, 
             width = None, 
             height = None, 
+            figsize = (18,3),
             timeunit = None, 
             nticks = None,
             smoothen = False):
@@ -174,15 +175,15 @@ class EPGDataset:
         ----------
         Arguments
         ----------
-            idx:        recording's name (str) or index (int)
-            mode:       static or interactive
-            hour:       the specific hour to plot
-            range:      A 2-tuple (a, b) specifying the start and end of the interested period (unit: second)
-            width:      width of the plot (only applicable to static plot)
-            height:     height of the plot (only applicable to static plot)
-            timeunit:   unit of the x-axis (sec, min or hour)
-            nticks:     number of ticks for x-axis
-            smoothen:   for making less resource-consuming plot (only applicable to interactive plot)
+            + idx:        recording's name (str) or index (int)
+            + mode:       static or interactive
+            + hour:       the specific hour to plot
+            + range:      A 2-tuple (a, b) specifying the start and end of the interested period (unit: second)
+            + width:      width of the plot (only applicable to static plot)
+            + height:     height of the plot (only applicable to static plot)
+            + timeunit:   unit of the x-axis (sec, min or hour)
+            + nticks:     number of ticks for x-axis
+            + smoothen:   for making less resource-consuming plot (only applicable to interactive plot)
         '''
         if isinstance(idx, str):
             recData = self.loadRec(idx)
@@ -192,7 +193,7 @@ class EPGDataset:
         if ana is None:
             print(f'No plot. No annotation (*.ANA) was found for {recData["name"]}.')
             return
-        plt.figure(figsize = (18,3))
+        plt.figure(figsize = figsize)
         if mode == 'static':
             if timeunit is None:
                 timeunit = 'sec'
@@ -222,8 +223,8 @@ class EPGDataset:
         ----------
         Arguments
         ----------
-            config: configuration files containing necessary info
-            verbose: if True, print descriptions
+            + config: configuration files containing necessary info
+            + verbose: if True, print descriptions
         --------
         Return
         --------
@@ -271,7 +272,7 @@ class EPGDataset:
         ----------
         Arguments
         ---------- 
-            ana: an ANA
+            + ana: an ANA
         '''
         if ana is None:
             check_text = ['No ANA.']*len(self.guidelines)
@@ -415,7 +416,7 @@ class EPGDataset:
         return check_text, check_log
         
     def getRecordingParams(self, 
-                            idx = None, 
+                            recordings_ids = None, 
                             ana = None, 
                             progress = 'overall', 
                             view = 'row', 
@@ -426,23 +427,23 @@ class EPGDataset:
         ----------
         Arguments
         ----------
-            idx (list or int):  recording's name or idx
-            ana:                an ANA
-            progress:           overall, progressive or cumulative
-            view:               row or column
-            export_xlsx:        export to an Excel file
-            separate_sheet:     export parameters separately or not 
+            + recordings_ids (list or int):  recordings' idxs
+            + ana:                an ANA
+            + progress:           overall, progressive or cumulative
+            + view:               row or column
+            + export_xlsx:        export to an Excel file
+            + separate_sheet:     export parameters separately or not 
         '''
-        if idx == None:
-            idx = [i for i in range(len(self.recordings))]
+        if recordings_ids == None:
+            recordings_ids = [i for i in range(len(self.recordings))]
         else:
-            if isinstance(idx, int):
-                idx = [idx]
+            if isinstance(recordings_ids, int):
+                recordings_ids = [recordings_ids]
         sheet_names = []
         recordingParams = []
         self.error_log = {}
 
-        for recIndex in idx:
+        for recIndex in recordings_ids:
             
             recData = self.recordings[recIndex]
             recDataset = recData['dataset']
@@ -1077,42 +1078,42 @@ class EPGDataset:
                     print(f'Exported to {os.getcwd()}/EPGParameters_{progress}.xlsx')
         return recordingParams            
 
-    def assign_treatments(self, recordings: list, treatment_id = 0):
+    def assign_treatments(self, recordings_ids: list, treatment_id = 0):
         '''
         Assigning treatment ID to loaded recordings.
         ----------
         Arguments
         ----------        
-            recordings: a list of recording
-            treatment_id: ID of the treatment group that you would like to assign
+            + recordings_ids: a list of recording
+            + treatment_id: ID of the treatment group that you would like to assign
         '''
         assert self.database_loaded == True, "Database is not loaded. Load with EPGDataset.load_database()."
-        if not isinstance(recordings, list):
-            recordings = [recordings]
-        for file in recordings:
+        if not isinstance(recordings_ids, list):
+            recordings_ids = [recordings_ids]
+        for file in recordings_ids:
             if isinstance(file, str):
                 idx = self.recording_name2id[file]
             else:
                 idx = file
-            assert self.recordings[idx]['id'] == idx, f'Index mismatch at {idx}'
-            self.recordings[idx]['treatment'] = treatment_id
+            assert self.recordings_ids[idx]['id'] == idx, f'Index mismatch at {idx}'
+            self.recordings_ids[idx]['treatment'] = treatment_id
 
-    def statistical_analysis(self, parameters, treatment_groups, test, *args):
+    def statistical_analysis(self, parameters, treatment_ids, test, *args):
         ''' 
         perform statistical analysis
         ----------
         Arguments
         ----------   
-            parameters: which parameter to perform statistical analysis
+            + parameters: which parameter to perform statistical analysis
             ...        
         '''
         assert not all(x is None for x in self.recordingParams['treatment']), 'No treatment was assigned.'
         samples = []
-        for id in treatment_groups:
+        for id in treatment_ids:
             a = self.recordingParams[self.recordingParams['treatment'] == id]
             a = a[parameters]
             samples.append(a)
-        n_samples = len(treatment_groups)
+        n_samples = len(treatment_ids)
         # except:
         #     raise RuntimeError('Please calculate the parameters first.')
         result = {}
@@ -1138,12 +1139,12 @@ class EPGDataset:
             result[type] = res    
         return result
 
-    def make_boxplot(self, parameters, treatment_groups, figsize = (6,6), max_ncol = 4):
+    def make_boxplot(self, parameters, treatment_ids, figsize = (6,6), max_ncol = 4):
         assert not all(x is None for x in self.recordingParams['treatment']), 'No treatment was assigned.'
         if not isinstance(parameters, list):
             parameters = [parameters]
         samples = {}
-        for id in treatment_groups:
+        for id in treatment_ids:
             a = self.recordingParams[self.recordingParams['treatment'] == id]
             a = a[parameters]
             samples[id] = a
@@ -1157,26 +1158,26 @@ class EPGDataset:
 
         for i, param in enumerate(parameters):
             df = []
-            for id in treatment_groups:
+            for id in treatment_ids:
                 tmp = samples[id][[param]]
                 tmp.index = [i for i in range(len(tmp))]
                 df.append(tmp)
             df = pd.concat(df, axis=1, ignore_index=True)
-            df.columns = treatment_groups
+            df.columns = treatment_ids
             if nrow == 1:
                 df.plot(kind='box', title=param, showmeans=True, ax=ax[i])
                 ax[i].grid('on')
-                ax[i].set_xticks(np.arange(1, len(df.columns)+1), [f'Group#{x}' for x in treatment_groups])
+                ax[i].set_xticks(np.arange(1, len(df.columns)+1), [f'Group#{x}' for x in treatment_ids])
             else:
                 df.plot(kind='box', title=param, showmeans=True, ax=ax[i//ncol, i%ncol])
                 ax[i//ncol, i%ncol].grid('on')
-                ax[i//ncol, i%ncol].set_xticks(np.arange(1, len(df.columns)+1),[f'Group#{x}' for x in treatment_groups])
+                ax[i//ncol, i%ncol].set_xticks(np.arange(1, len(df.columns)+1),[f'Group#{x}' for x in treatment_ids])
         for j in range(i+1, nrow*ncol):
             f.delaxes(ax[j//ncol, j%ncol])
         plt.tight_layout()
         plt.show()
-    def datasetSummary(self):
 
+    def datasetSummary(self):
         durations = {'NP': [], 'C': [], 'E1': [], 'E2': [], 'F': [], 'G': [], 'pd': []}
         counts = {'NP': 0, 'C': 0, 'E1': 0, 'E2': 0, 'F': 0, 'G': 0, 'pd': 0}
         s_length = 0

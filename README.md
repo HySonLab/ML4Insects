@@ -95,10 +95,25 @@ We hugely thanks the authors of the cited work for providing us with necessary t
 }
 ```
 
+```bibtex
+@article {Dinh2024.12.05.627099,
+	author = {Dinh, Quang Dung and Kunk, Daniel and Hy, Truong Son and Nalam, Vamsi J and Dao, Phuong},
+	title = {DiscoEPG: A Python package for characterization of insect electrical penetration graph (EPG) signals},
+	elocation-id = {2024.12.05.627099},
+	year = {2024},
+	doi = {10.1101/2024.12.05.627099},
+	publisher = {Cold Spring Harbor Laboratory},
+	abstract = {The Electrical Penetration Graph (EPG) technique is a well-known specialized tool that entomologists use to monitor and analyze the feeding behavior of piercing-sucking insects, such as aphids, whiteflies, and leafhoppers, on plants. Traditionally, the annotation is conducted by a well-trained technician who uses expert knowledge to compare the targeted waveforms with standard waveforms of aphid feeding behavior, which takes approximately 30 minutes to annotate an 8-hour recording depending on the complexity of the insect behaviors. Machine learning (ML) models, which shown great potential in monitoring insects behaviors, have recently been used to speed up this process. However, most publicly available tools that provide automatic annotation suffer from low prediction accuracy due to only using simple distinction rules to classify waveforms. For this reason, we develop DiscoEPG, an open-source Python package which performs accurate automatic EPG signal annotation. Various ML algorithms were experimented rigorously, which reports greater prediction power and improved accuracy in comparison to previous studies. In addition, we equipped our package with novel tools for generating journal-level plots to facilitate visual inspection, while including the computation of various EPG parameters and necessary statistical analysis which are popular in the research of aphids. With DiscoEPG, we aim to facilitate the rapid characterization of analysis of piercing-sucking insects feeding behavior through EPG signal, making this technique more viable to researchers who share the same interest. Our package is publicly available at: https://github.com/HySonLab/ML4InsectsCompeting Interest StatementThe authors have declared no competing interest.},
+	URL = {https://www.biorxiv.org/content/early/2024/12/10/2024.12.05.627099},
+	eprint = {https://www.biorxiv.org/content/early/2024/12/10/2024.12.05.627099.full.pdf},
+	journal = {bioRxiv}
+}
+```
+
 ## 🧑‍🔬 Contributors
 * Quang-Dung DINH, Institut Galilée, Universite Sorbonne Paris Nord, Villetaneuse 93430, Paris, France
-* Truong Son HY (PI), Department of Mathematics and Computer Science, Indiana State University, Terre Haute, IN 47809, United States
-* Phuong DAO (PI), Department of Agricultural Biology, Colorado State University, Fort Collins, CO 80523, United States
+* Dr. Truong Son HY (PI), Department of Computer Science, University of Alabama at Birmingham, Birmingham, AL 35294, United States
+* Dr. Phuong DAO (PI), Department of Agricultural Biology, Colorado State University, Fort Collins, CO 80523, United States
 
 ## 📖 References
 [1.](https://onlinelibrary.wiley.com/doi/10.1111/j.1570-7458.1978.tb02836.x) _Aphids' EPG waveforms_. Tjallingii WF. Electronic Recording of Penetration Behaviour by Aphids Entomologia Experimentalis et Applicata. 1978; 24(3): 721–730.

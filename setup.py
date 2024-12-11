@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 setup(
     name = 'DiscoEPG',
-    version = '0.0.21',
+    version = '0.0.22',
     description = "Open-source package for insects EPG data analysis",
     package_dir = {"":"package"},
     packages= find_packages(where = "package"),

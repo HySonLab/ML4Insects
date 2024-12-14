@@ -333,7 +333,9 @@ def plot_pred_proba(predicted_probability, hop_length, scope, r: tuple = None, a
 
     plt.legend(loc = 'upper right')
 
-def plot_gt_vs_pred_segmentation(recording, gt_ana, pred_ana = None, hour = None, range = None, which = 'pred_vs_gt', name: str = '', savefig = False, save_dir = ''): 
+def plot_gt_vs_pred_segmentation(recording, gt_ana, pred_ana = None, hour = None, range = None, 
+                                    timeunit = 'sec', nticks = 10, which = 'pred_vs_gt', 
+                                    name: str = '', savefig = False, save_dir = ''): 
     if save_dir == '':
         save_dir = './prediction/figures'
     if gt_ana is None:
@@ -356,11 +358,11 @@ def plot_gt_vs_pred_segmentation(recording, gt_ana, pred_ana = None, hour = None
 
         f, ax = plt.subplots(2, 1, figsize=(16,5), sharex= True)
         
-        visualize_signal(recording, gt_ana, ax=ax[0], hour = hour, range = range)
+        visualize_signal(recording, gt_ana, ax=ax[0], hour = hour, range = range, timeunit = timeunit, nticks = nticks)
         ax[0].text(0.85, 0.1, 'Ground-truth', horizontalalignment='center', verticalalignment='center', transform=ax[0].transAxes)
         ax[0].set_xlabel('')
         ax[0].set_title(name)
-        visualize_signal(recording, pred_ana, ax = ax[1], hour = hour, range = range)
+        visualize_signal(recording, pred_ana, ax = ax[1], hour = hour, range = range, timeunit = timeunit, nticks = nticks)
         ax[1].text(0.85, 0.1, 'Predicted', horizontalalignment='center', verticalalignment='center', transform=ax[1].transAxes)
         plt.subplots_adjust(hspace = 0)
 

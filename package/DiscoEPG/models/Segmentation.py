@@ -334,7 +334,7 @@ class EPGSegment:
     def save_checkpoint(self, name: str = '', save_dir: str = ''):
         assert self.model_is_trained == True, 'Model is not trained.'
         if save_dir == '':
-            save_dir = f'{self.root_dir}/checkpoints/{self.model.__arch__}'
+            save_dir = f'{self.root_dir}/checkpoints'
         
         os.makedirs(save_dir, exist_ok = True)
 
@@ -349,12 +349,12 @@ class EPGSegment:
         torch.save(self.model, save_path)
         print(f'Parameters saved to {save_path}.')
 
-    def plot_segmentation(self, which = 'pred_vs_gt', hour = None, range = None, savefig = False, name: str = '', save_dir = ''): 
+    def plot_segmentation(self, which = 'pred_vs_gt', hour = None, range = None, savefig = False, name: str = '', save_dir = '', timeunit = 'sec', nticks = 10): 
         if 'gt' in which:
             assert self.gt_ana is not None, "Ground-truth annotation does not exist. Can only plot prediction."
         if 'pred' in which:
             assert hasattr(self, 'pred_ana'), "Prediction have not been made."
-        visualization.plot_gt_vs_pred_segmentation(self.gt_recording, self.gt_ana, self.pred_ana, hour, range, which, name, savefig, save_dir)
+        visualization.plot_gt_vs_pred_segmentation(self.gt_recording, self.gt_ana, self.pred_ana, hour, range, timeunit, nticks, which, name, savefig, save_dir)
                 
     def plot_interactive(self, which = 'pred', smoothen = False):
         if which == 'pred':

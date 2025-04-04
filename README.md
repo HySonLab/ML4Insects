@@ -81,6 +81,24 @@ We hugely thanks the authors of the cited work for providing us with necessary t
 ## ✅ If you find our work helpful, please cite it with
 
 ```bibtex
+@article{10.1371/journal.pone.0319484,
+    doi = {10.1371/journal.pone.0319484},
+    author = {Dinh, Quang Dung AND Kunk, Daniel AND Son Hy, Truong AND Nalam, Vamsi AND Dao, Phuong D},
+    journal = {PLOS ONE},
+    publisher = {Public Library of Science},
+    title = {Machine learning for automated electrical penetration graph analysis of aphid feeding behavior: Accelerating research on insect-plant interactions},
+    year = {2025},
+    month = {04},
+    volume = {20},
+    url = {https://doi.org/10.1371/journal.pone.0319484},
+    pages = {1-25},
+    abstract = {The electrical penetration graph (EPG) is a well-known technique that provides insights into the feeding behavior of insects with piercing-sucking mouthparts, mostly hemipterans. Since its inception in the 1960s, EPG has become indispensable in studying plant-insect interactions, revealing critical information about host plant selection, plant resistance, virus transmission, and responses to environmental factors. By integrating the plant and insect into an electrical circuit, EPG allows researchers to identify specific feeding behaviors based on their distinctive waveform patterns. However, the traditional manual analysis of EPG waveform data is time-consuming and labor-intensive, limiting research throughput. This study presents a novel Machine Learning (ML) approach to automate the annotation of EPG signals. We rigorously evaluated six diverse ML models, including neural networks, tree-based models, and logistic regression, using an extensive dataset from multiple aphid feeding experiments. Our results demonstrate that a Residual Network (ResNet) architecture achieved the highest overall waveform classification accuracy of 96.8% and highest segmentation overlap rate of 84.4%, highlighting the potential of ML for accurate and efficient EPG analysis. This automated approach promises to accelerate research in this field significantly and broaden insights into insect-plant interactions, showcasing the power of computational techniques for insect biological research. The source code for all experiments conducted within this study is publicly available at https://github.com/HySonLab/ML4Insects.},
+    number = {4},
+
+}
+```
+
+```bibtex
 @article {Dinh2024.06.10.598170,
 	author = {Dinh, Quang-Dung and Kunk, Daniel and Hy, Truong Son and Nalam, Vamsi J and Dao, Phuong},
 	title = {Machine learning for characterizing plant-insect interactions through electrical penetration graphic signal},
@@ -112,7 +130,7 @@ We hugely thanks the authors of the cited work for providing us with necessary t
 
 ## 🧑‍🔬 Contributors
 * Quang-Dung DINH, Institut Galilée, Universite Sorbonne Paris Nord, Villetaneuse 93430, Paris, France
-* Dr. Truong Son HY (PI), Department of Computer Science, University of Alabama at Birmingham, Birmingham, AL 35294, United States
+* Dr. Truong-Son HY (PI), Department of Computer Science, University of Alabama at Birmingham, Birmingham, AL 35294, United States
 * Dr. Phuong DAO (PI), Department of Agricultural Biology, Colorado State University, Fort Collins, CO 80523, United States
 
 ## 📖 References

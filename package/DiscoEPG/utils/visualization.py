@@ -12,9 +12,18 @@ from plotly_resampler import FigureResampler, FigureWidgetResampler
 
 from ..dataset_utils.datahelper import get_index
 
-
-c = {'NP':'darkgoldenrod',    'C':'lightgreen',    'E1':'skyblue',    'E2':'deeppink',  'F':'crimson',   'G':'darkblue',   'pd':'olive'}
-
+# changing color palette to a variation on Paul Tol's "muted" palette.
+# this palette is colorblind safe.
+c = {
+    "NP": "#332288",
+    "C": "#88ccee",
+    "E1": "#44aa99",
+    "E2": "#999933",
+    "F": "#cc6677",
+    "G": "#882255",
+    "pd": "#aa4499",
+}
+    
 #######################
 ## Display waveforms ##
 #######################

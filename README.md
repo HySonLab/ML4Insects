@@ -2,6 +2,11 @@
 ![ML4Insects](/figures/disco-concepts.png)
 \
 [PyPI Link](https://pypi.org/project/DiscoEPG/)
+
+Our work has been published at:
+* PLOS ONE: [paper](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0319484)
+* Smart Agricultural Technology: [paper](https://www.sciencedirect.com/science/article/pii/S2772375526000985?via%3Dihub)
+
 ## 🌎 Overview
 Electrical penetration graph (EPG) is a technique used to study the feeding behavior of piercing-sucking insects such as aphids. Specifically, the experimental insect and host plant are made part of an electrical circuit, which is closed when aphid mouthparts penetrate plant tissue. When the aphid stylet is inserted intercellularly, the voltage is positive and when inserted intracellularly, the voltage is negative. Waveforms in EPG have been correlated to specific aphid feeding behaviors by stylectomy followed by microscopy of the plant tissue to determine the approximate location of the stylet as well as observing aphid head movement, posture, and muscle dynamics. EPG is well established and has been widely used to study the mechanisms of plant virus transmission by aphids, the effect of resistant and susceptible lines on aphid feeding behaviors, and to better our understanding of the mechanisms that aphids use to continuously feed from the phloem. 
 

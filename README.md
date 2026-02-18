@@ -99,32 +99,18 @@ We hugely thanks the authors of the cited work for providing us with necessary t
 ```
 
 ```bibtex
-@article {Dinh2024.06.10.598170,
-	author = {Dinh, Quang-Dung and Kunk, Daniel and Hy, Truong Son and Nalam, Vamsi J and Dao, Phuong},
-	title = {Machine learning for characterizing plant-insect interactions through electrical penetration graphic signal},
-	elocation-id = {2024.06.10.598170},
-	year = {2024},
-	doi = {10.1101/2024.06.10.598170},
-	publisher = {Cold Spring Harbor Laboratory},
-	abstract = {The electrical penetration graph (EPG) is a well-known technique that provides insights into the feeding behavior of insects with piercing-sucking mouthparts, mostly hemipterans. Since its inception in the 1960s, EPG has become indispensable in studying plant-insect interactions, revealing critical information about host plant selection, plant resistance, virus transmission, and responses to environmental factors. By integrating the plant and insect into an electrical circuit, EPG allows researchers to identify specific feeding behaviors based on distinct waveform patterns associated with activities within plant tissues. However, the traditional manual analysis of EPG waveform data is time-consuming and labor-intensive, limiting research throughput. This study presents a novel machine-learning approach to automate the segmentation and classification of EPG signals. We rigorously evaluated six diverse machine learning models, including neural networks, tree-based models, and logistic regressions, using an extensive dataset from aphid feeding experiments. Our results demonstrate that a Residual Network (ResNet) architecture achieved the highest overall waveform classification accuracy of 96.8\% and highest segmentation overlap rate of 84.4\%, highlighting the potential of machine learning for accurate and efficient EPG analysis. This automated approach promises to accelerate research in this field significantly and has the potential to be generalized to other insect species and experimental settings. Our findings underscore the value of applying advanced computational techniques to complex biological datasets, paving the way for a more comprehensive understanding of insect-plant interactions and their broader ecological implications. The source code for all experiments conducted within this study is publicly available at https://github.com/HySonLab/ML4InsectsCompeting Interest StatementThe authors have declared no competing interest.},
-	URL = {https://www.biorxiv.org/content/early/2024/06/11/2024.06.10.598170},
-	eprint = {https://www.biorxiv.org/content/early/2024/06/11/2024.06.10.598170.full.pdf},
-	journal = {bioRxiv}
-}
-```
-
-```bibtex
-@article {Dinh2024.12.05.627099,
-	author = {Dinh, Quang Dung and Kunk, Daniel and Hy, Truong Son and Nalam, Vamsi J and Dao, Phuong},
-	title = {DiscoEPG: A Python package for characterization of insect electrical penetration graph (EPG) signals},
-	elocation-id = {2024.12.05.627099},
-	year = {2024},
-	doi = {10.1101/2024.12.05.627099},
-	publisher = {Cold Spring Harbor Laboratory},
-	abstract = {The Electrical Penetration Graph (EPG) technique is a well-known specialized tool that entomologists use to monitor and analyze the feeding behavior of piercing-sucking insects, such as aphids, whiteflies, and leafhoppers, on plants. Traditionally, the annotation is conducted by a well-trained technician who uses expert knowledge to compare the targeted waveforms with standard waveforms of aphid feeding behavior, which takes approximately 30 minutes to annotate an 8-hour recording depending on the complexity of the insect behaviors. Machine learning (ML) models, which shown great potential in monitoring insects behaviors, have recently been used to speed up this process. However, most publicly available tools that provide automatic annotation suffer from low prediction accuracy due to only using simple distinction rules to classify waveforms. For this reason, we develop DiscoEPG, an open-source Python package which performs accurate automatic EPG signal annotation. Various ML algorithms were experimented rigorously, which reports greater prediction power and improved accuracy in comparison to previous studies. In addition, we equipped our package with novel tools for generating journal-level plots to facilitate visual inspection, while including the computation of various EPG parameters and necessary statistical analysis which are popular in the research of aphids. With DiscoEPG, we aim to facilitate the rapid characterization of analysis of piercing-sucking insects feeding behavior through EPG signal, making this technique more viable to researchers who share the same interest. Our package is publicly available at: https://github.com/HySonLab/ML4InsectsCompeting Interest StatementThe authors have declared no competing interest.},
-	URL = {https://www.biorxiv.org/content/early/2024/12/10/2024.12.05.627099},
-	eprint = {https://www.biorxiv.org/content/early/2024/12/10/2024.12.05.627099.full.pdf},
-	journal = {bioRxiv}
+@article{QUANGDINH2026101874,
+title = {DiscoEPG: A Python package for characterization of insect electrical penetration graph (EPG) signals},
+journal = {Smart Agricultural Technology},
+volume = {13},
+pages = {101874},
+year = {2026},
+issn = {2772-3755},
+doi = {https://doi.org/10.1016/j.atech.2026.101874},
+url = {https://www.sciencedirect.com/science/article/pii/S2772375526000985},
+author = {Dung {Quang Dinh} and Daniel Kunk and Truong-Son Hy and Nalam Vamsi and Phuong D. Dao},
+keywords = {Electrical penetration graph, Pierce-sucking insect, Automatic annotation, Machine learning, Open-source package},
+abstract = {The Electrical Penetration Graph (EPG) technique is a widely recognized tool for monitoring and analyzing the feeding behavior of herbivorous insects with piercing-sucking mouthparts, such as aphids. Traditionally, EPG waveform annotation relies on a skilled practitioner using expert knowledge to compare target waveforms with the standard patterns of feeding behaviors. This process is labor-intensive, often requiring more than 30 minutes to annotate an 8-hour recording, depending on the complexity of the behaviors displayed. Machine learning (ML) has shown significant potential in automating behavioral analysis, including in EPG waveform annotation. However, most publicly available tools that provide automatic annotation suffer from low prediction accuracy due to their simple classification rules. To address this limitation, we developed DiscoEPG, an open-source Python package that offers highly accurate automatic annotation of aphid EPG data generated with EPG Systems hardware and the associated Stylet+ software. We rigorously evaluated multiple ML algorithms, demonstrating superior predictive accuracy compared to existing methods. In addition, DiscoEPG includes novel features to improve usability, such as tools to generate publication-quality visualizations, compute EPG variables, and perform statistical analysis. By streamlining the analysis of aphid EPG data, DiscoEPG aims to make this technique more accessible to researchers studying the feeding behavior of aphids. Our package source code and example interactive workbooks are publicly available at: https://github.com/HySonLab/ML4Insects.}
 }
 ```
 
